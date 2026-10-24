@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>L'Enclume Astrale — Forge Magique & Commerce D&D 5e</title>
+    <meta
+      name="description"
+      content="Calculateur économique de forge magique, simulation de marché au d20 et tarification de consommables pour D&D 5e / D&D 3.5."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <a href="#main-content" class="skip-link">Aller au contenu principal</a>
+
+    <header class="app-header">
+      <div class="header-container">
+        <div class="brand">
+          <span class="brand-icon" aria-hidden="true">⚒</span>
+          <div>
+            <h1 class="brand-title">L'Enclume Astrale</h1>
+            <p class="brand-subtitle">Forge arcanique & comptoir stellaire pour D&D 5e / 3.5</p>
+          </div>
+        </div>
+
+        <nav class="tabs-nav" aria-label="Sections principales de l'application">
+          <button
+            id="tab-btn-forge"
+            class="tab-btn active"
+            role="tab"
+            aria-selected="true"
+            aria-controls="panel-forge"
+          >
+            <span class="tab-icon" aria-hidden="true">🔥</span> Atelier de Forge
+          </button>
+          <button
+            id="tab-btn-market"
+            class="tab-btn"
+            role="tab"
+            aria-selected="false"
+            aria-controls="panel-market"
+          >
+            <span class="tab-icon" aria-hidden="true">🎲</span> Comptoir du Marché
+          </button>
+          <button
+            id="tab-btn-consumables"
+            class="tab-btn"
+            role="tab"
+            aria-selected="false"
+            aria-controls="panel-consumables"
+          >
+            <span class="tab-icon" aria-hidden="true">🏹</span> Munitions & Potions
+          </button>
+          <button
+            id="tab-btn-catalog"
+            class="tab-btn"
+            role="tab"
+            aria-selected="false"
+            aria-controls="panel-catalog"
+          >
+            <span class="tab-icon" aria-hidden="true">📜</span> Grimoire d'Enchantements
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main-content" class="app-main">
+      <!-- PANEL 1: ATELIER DE FORGE -->
+      <section
+        id="panel-forge"
+        class="tab-panel active"
+        role="tabpanel"
+        aria-labelledby="tab-btn-forge"
+      >
+        <div class="panel-header">
+          <h2>Atelier de Forge Arcanique</h2>
+          <p>
+            Configurez vos objets permanents selon le barème quadratique (<code>1 000 × N² po</code>).
+            Les armes +B disposent strictement de <strong>B slots d'effets au maximum</strong>.
+          </p>
+        </div>
+
+        <div class="forge-grid">
+          <!-- Configuration Form -->
+          <div class="card forge-config-card">
+            <h3>Paramètres de l'Objet</h3>
+
+            <div class="form-group">
+              <label for="forge-category">Catégorie d'équipement</label>
+              <select id="forge-category" class="select-control">
+                <option value="weapon">Arme de corps à corps ou à distance (C = 1,00)</option>
+                <option value="armor_or_shield">Armure ou Bouclier (C = 0,85)</option>
+                <option value="autonomous_permanent">Objet autonome permanent (C = 0,80)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="forge-bonus">Bonus d'altération nu (B)</label>
+              <div class="bonus-selector" id="forge-bonus-group" role="radiogroup" aria-label="Bonus d'altération">
+                <button type="button" class="bonus-chip" data-bonus="0">0</button>
+                <button type="button" class="bonus-chip" data-bonus="1">+1</button>
+                <button type="button" class="bonus-chip active" data-bonus="2">+2</button>
+                <button type="button" class="bonus-chip" data-bonus="3">+3</button>
+                <button type="button" class="bonus-chip" data-bonus="4">+4</button>
+              </div>
+              <input type="hidden" id="forge-bonus-value" value="2" />
+            </div>
+
+            <div class="capacity-meter" id="forge-capacity-meter">
+              <div class="capacity-label">
+                <span>Capacité de slots :</span>
+                <strong id="capacity-counter">0 / 2 slots</strong>
+              </div>
+              <div class="capacity-bar">
+                <div class="capacity-fill" id="capacity-fill" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Propriétés d'enchantement disponibles</label>
+              <div class="enchantment-checklist" id="forge-enchantment-list">
+                <!-- Injected via JavaScript -->
+              </div>
+            </div>
+
+            <!-- Mode Amélioration Toggle -->
+            <div class="upgrade-section">
+              <button type="button" id="toggle-upgrade-mode" class="btn btn-secondary btn-sm">
+                ⚙ Comparer avec un objet initial (Mode Amélioration)
+              </button>
+              <div id="upgrade-fields" class="upgrade-fields hidden">
+                <h4>Objet Actuel Avant Amélioration</h4>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="upgrade-initial-bonus">Bonus initial</label>
+                    <select id="upgrade-initial-bonus" class="select-control">
+                      <option value="0">+0</option>
+                      <option value="1" selected>+1</option>
+                      <option value="2">+2</option>
+                      <option value="3">+3</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="upgrade-initial-slots">Slots initiaux</label>
+                    <input
+                      type="number"
+                      id="upgrade-initial-slots"
+                      class="input-control"
+                      value="0"
+                      min="0"
+                      max="4"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Quote Display -->
+          <div class="card forge-quote-card">
+            <h3>Devis Garanti de la Forge</h3>
+
+            <div id="forge-invalid-banner" class="alert-banner alert-danger hidden" role="alert">
+              <span class="alert-icon" aria-hidden="true">⚠️</span>
+              <div>
+                <strong>Configuration Invalide :</strong>
+                <p id="forge-invalid-msg">Les slots d'effets dépassent le bonus d'altération maximal (ADR-0002).</p>
+              </div>
+            </div>
+
+            <div id="forge-quote-body" class="quote-body">
+              <div class="quote-metrics">
+                <div class="metric-box">
+                  <span class="metric-label">Niveau de base T(B)</span>
+                  <span class="metric-value" id="quote-base-level">3</span>
+                </div>
+                <div class="metric-box">
+                  <span class="metric-label">Slots d'effets S</span>
+                  <span class="metric-value" id="quote-slots">0</span>
+                </div>
+                <div class="metric-box highlight">
+                  <span class="metric-label">Niveau effectif N</span>
+                  <span class="metric-value" id="quote-effective-level">3</span>
+                </div>
+              </div>
+
+              <div class="price-showcase">
+                <span class="price-title">Plafond Garanti Annoncé</span>
+                <div class="price-amount">
+                  <span id="quote-ceiling-price">9 000</span>
+                  <span class="currency">po</span>
+                </div>
+                <p class="price-note">
+                  Prix maximal garanti. Le montant payé au marché ne peut en aucun cas excéder ce montant.
+                </p>
+              </div>
+
+              <div id="upgrade-cost-box" class="upgrade-cost-box hidden">
+                <span class="upgrade-cost-label">Surcoût d'amélioration :</span>
+                <span class="upgrade-cost-val" id="upgrade-cost-val">8 000 po</span>
+              </div>
+
+              <button type="button" id="send-to-market-btn" class="btn btn-primary btn-block">
+                🎲 Négocier ce devis au Comptoir du Marché
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANEL 2: COMPTOIR DU MARCHÉ -->
+      <section
+        id="panel-market"
+        class="tab-panel"
+        role="tabpanel"
+        aria-labelledby="tab-btn-market"
+      >
+        <div class="panel-header">
+          <h2>Comptoir du Marché aux d20</h2>
+          <p>
+            Simulez la variabilité du marché selon <code>P_payé = P_plafond × min(1 ; (70 + 2×d20)/100)</code>.
+            Le prix est garanti au plafond ; un d20 ≥ 16 apporte une opportunité narrative (matériau, incident, quête).
+          </p>
+        </div>
+
+        <div class="market-grid">
+          <!-- Market Controls -->
+          <div class="card market-control-card">
+            <h3>Paramètres de la Négociation</h3>
+
+            <div class="form-group">
+              <label for="market-ceiling-input">Plafond de devis garanti (po)</label>
+              <input
+                type="number"
+                id="market-ceiling-input"
+                class="input-control font-mono"
+                value="25000"
+                min="100"
+                step="100"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="market-d20-slider">Tirage du Dé à 20 Faces (d20)</label>
+              <div class="d20-control-row">
+                <input
+                  type="range"
+                  id="market-d20-slider"
+                  class="slider-control"
+                  min="1"
+                  max="20"
+                  value="10"
+                />
+                <input
+                  type="number"
+                  id="market-d20-number"
+                  class="input-control d20-number-input font-mono"
+                  min="1"
+                  max="20"
+                  value="10"
+                />
+              </div>
+            </div>
+
+            <button type="button" id="roll-d20-btn" class="btn btn-gold btn-block">
+              <span class="btn-icon" aria-hidden="true">🎲</span> Lancer le Dé du Destin
+            </button>
+          </div>
+
+          <!-- Market Results -->
+          <div class="card market-result-card">
+            <div class="die-badge-container">
+              <div class="die-badge" id="die-display" aria-label="Résultat du dé : 10">10</div>
+              <div>
+                <h4 id="market-outcome-title">Marché favorable</h4>
+                <p id="market-ratio-desc">Remise marchande de 10 % (taux 90 %)</p>
+              </div>
+            </div>
+
+            <div class="price-showcase market-price-showcase">
+              <span class="price-title">Prix Final Négocié</span>
+              <div class="price-amount text-gold">
+                <span id="market-final-price">22 500</span>
+                <span class="currency">po</span>
+              </div>
+              <div class="economy-saved">
+                Économie réalisée : <strong id="market-savings">2 500 po</strong>
+              </div>
+            </div>
+
+            <div id="market-complication-card" class="complication-card hidden" role="region" aria-label="Complication narrative">
+              <div class="complication-header">
+                <span class="complication-badge">Événement Narratif</span>
+                <span id="complication-level">Complication d'Atelier</span>
+              </div>
+              <p id="complication-text" class="complication-body">
+                Une difficulté arcanique survient lors du rituel.
+              </p>
+              <div class="complication-tip">
+                💡 <strong>Règle intangible :</strong> aucun surcoût financier au-delà du plafond ! Le surplus de difficulté se résout par une action en jeu.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANEL 3: MUNITIONS & POTIONS -->
+      <section
+        id="panel-consumables"
+        class="tab-panel"
+        role="tabpanel"
+        aria-labelledby="tab-btn-consumables"
+      >
+        <div class="panel-header">
+          <h2>Armurerie de Munitions & Consommables Alchimiques</h2>
+          <p>
+            Les munitions enchantées sont calculées à raison de <strong>1/50e du prix de forge par unité</strong>.
+            Les consommables alchimiques sont organisés par paliers de puissance clairs.
+          </p>
+        </div>
+
+        <div class="consumables-grid">
+          <!-- Ammunition Calculator -->
+          <div class="card ammo-card">
+            <h3>Calculateur de Lots de Munitions</h3>
+
+            <div class="form-group">
+              <label for="ammo-quantity">Quantité de munitions (ex: flèches, carreaux)</label>
+              <input
+                type="number"
+                id="ammo-quantity"
+                class="input-control font-mono"
+                value="10"
+                min="1"
+                max="500"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="ammo-bonus">Bonus d'altération magique</label>
+              <select id="ammo-bonus" class="select-control">
+                <option value="0">Munition non-magique (+0)</option>
+                <option value="1" selected>Munition magique +1 (20 po/u)</option>
+                <option value="2">Munition magique +2 (180 po/u)</option>
+                <option value="3">Munition magique +3 (720 po/u)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Qualités utilitaires fixes</label>
+              <div class="checkbox-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="ammo-unbreakable" />
+                  <span>Incassable (+20 po / unité)</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="ammo-forceful" />
+                  <span>Percutante (+20 po / unité)</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="ammo-silvered" />
+                  <span>Argentage stellaire (+10 po / unité)</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="ammo-quote-summary">
+              <div class="summary-line">
+                <span>Coût unitaire :</span>
+                <strong id="ammo-unit-price">20 po / munition</strong>
+              </div>
+              <div class="summary-line highlight">
+                <span>Prix plafond du lot :</span>
+                <strong id="ammo-total-ceiling">200 po</strong>
+              </div>
+            </div>
+
+            <button type="button" id="send-ammo-to-market" class="btn btn-secondary btn-block">
+              Tester le lot au tirage d20
+            </button>
+          </div>
+
+          <!-- Potions & Special Items -->
+          <div class="card potion-card">
+            <h3>Potions de Soins & Consommables Spéciaux</h3>
+
+            <div class="variant-toggle-box">
+              <label for="potion-variant-toggle" class="toggle-label">
+                <span>Règles de tarification :</span>
+                <select id="potion-variant-toggle" class="select-control inline-select">
+                  <option value="standard">Standard D&D 5e (50 / 500 / 5k / 50k po)</option>
+                  <option value="dnd_2024">Variante D&D 2024 (50 / 200 / 2k / 20k po)</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="potions-list">
+              <div class="potion-item">
+                <div class="potion-info">
+                  <strong>Potion de soins standard (2d4 + 2)</strong>
+                  <span class="rarity-badge common">Commune</span>
+                </div>
+                <div class="potion-price" id="price-potion-common">50 po</div>
+              </div>
+              <div class="potion-item">
+                <div class="potion-info">
+                  <strong>Potion de soins supérieurs (4d4 + 4)</strong>
+                  <span class="rarity-badge uncommon">Peu commune</span>
+                </div>
+                <div class="potion-price" id="price-potion-uncommon">500 po</div>
+              </div>
+              <div class="potion-item">
+                <div class="potion-info">
+                  <strong>Potion de soins suprêmes (8d4 + 8)</strong>
+                  <span class="rarity-badge rare">Rare</span>
+                </div>
+                <div class="potion-price" id="price-potion-rare">5 000 po</div>
+              </div>
+              <div class="potion-item">
+                <div class="potion-info">
+                  <strong>Potion de soins magistraux (10d4 + 20)</strong>
+                  <span class="rarity-badge very_rare">Très rare</span>
+                </div>
+                <div class="potion-price" id="price-potion-very-rare">50 000 po</div>
+              </div>
+            </div>
+
+            <h4 class="specialty-title">Consommables d'Artisanat</h4>
+            <div class="specialty-list">
+              <div class="specialty-item">
+                <div>
+                  <strong>Poudre de disparition</strong>
+                  <p>Invisibilité temporaire (2d4 minutes).</p>
+                </div>
+                <span class="specialty-price">250 po / dose</span>
+              </div>
+              <div class="specialty-item">
+                <div>
+                  <strong>Onguent de soin</strong>
+                  <p>Guérison 2d8+2 et neutralisation de poison.</p>
+                </div>
+                <span class="specialty-price">150 po / pot</span>
+              </div>
+              <div class="specialty-item">
+                <div>
+                  <strong>Colle universelle</strong>
+                  <p>Scellement quasi-indestructible.</p>
+                </div>
+                <span class="specialty-price">2 000 po / fiole</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANEL 4: GRIMOIRE D'ENCHANTEMENTS -->
+      <section
+        id="panel-catalog"
+        class="tab-panel"
+        role="tabpanel"
+        aria-labelledby="tab-btn-catalog"
+      >
+        <div class="panel-header">
+          <h2>Grimoire des Enchantements & Objets Célestes</h2>
+          <p>
+            Consultez les propriétés magiques calibrées pour D&D 5e et les objets autonomes étalonnés sur l'échelle de niveau N.
+          </p>
+        </div>
+
+        <div class="card catalog-search-card">
+          <div class="catalog-filters">
+            <div class="search-input-wrapper">
+              <input
+                type="search"
+                id="catalog-search-input"
+                class="input-control"
+                placeholder="Rechercher par nom, effet, propriété (ex: Frugale, Sournoise, Téléportation)..."
+                aria-label="Rechercher dans le grimoire"
+              />
+            </div>
+            <div class="filter-chips" role="group" aria-label="Filtrer par catégorie">
+              <button type="button" class="filter-chip active" data-cat="all">Tous</button>
+              <button type="button" class="filter-chip" data-cat="weapon">Armes</button>
+              <button type="button" class="filter-chip" data-cat="armor_or_shield">Armures & Boucliers</button>
+              <button type="button" class="filter-chip" data-cat="autonomous_permanent">Objets Autonomes</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="catalog-grid" id="catalog-results-grid">
+          <!-- Injected via JavaScript -->
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <div class="footer-container">
+        <p>
+          <strong>L'Enclume Astrale</strong> — Système d'artisanat et d'économie arcanique pour D&D 5e / D&D 3.5.
+        </p>
+        <p class="footer-subtext">
+          Conformité stricte de la propriété intellectuelle. Formules mathématiques et règles techniques authentiques.
+          Développé sous le framework public <strong>EPURE v1.0.0</strong>.
+        </p>
+      </div>
+    </footer>
+
+    <!-- Live Announcer for Screen Readers (WCAG 2.1 AA) -->
+    <div id="aria-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
