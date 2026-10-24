@@ -36,7 +36,7 @@ Application web statique responsive d'artisanat arcanique et d'économie des obj
 
 - **Propriété Intellectuelle** : Formules mathématiques et caractéristiques techniques authentiques issues des classeurs de conception ; lore et désignations narratives réécrits sous la marque « L'Enclume Astrale ».
 - **Accessibilité (WCAG 2.1 AA)** : Thème sombre à fort contraste (≥ 4.5:1), navigation clavier intégrale avec anneau de focus visible, balises sémantiques et annonces vocales `aria-live`.
-- **Framework Public EPURE** : Workflows réutilisables épinglés sur `v1.0.0` (`d5d9dd770ee20c6ab1ec586b6f5ba30072e25d99`).
+- **Framework Public EPURE** : Workflows réutilisables épinglés sur `v1.0.1` (`dbd1f5167f2b58ad59d5f51b3b722d56f12ea654`).
 
 ---
 
