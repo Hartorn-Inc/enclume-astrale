@@ -1,0 +1,20 @@
+name: "EPURE Issue Command Gate"
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  checks: write
+jobs:
+  authorize-and-dispatch:
+    uses: Giskard-AI/epure/.github/workflows/issue-command.yml@4fcc1c059df4f24eb803aaf785a990359adb1b39 # v1.1.0
+    with:
+      repository: ${{ github.repository }}
+      issue_number: ${{ github.event.issue.number }}
+      comment_id: ${{ github.event.comment.id }}
+      comment_body: ${{ github.event.comment.body }}
+      actor: ${{ github.event.comment.user.login }}
+      actor_type: ${{ github.event.comment.user.type }}
+    secrets: inherit
