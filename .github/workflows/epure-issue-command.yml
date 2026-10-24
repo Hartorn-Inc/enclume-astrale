@@ -9,7 +9,7 @@ permissions:
   checks: write
 jobs:
   authorize-and-dispatch:
-    uses: Giskard-AI/epure/.github/workflows/issue-command.yml@4fcc1c059df4f24eb803aaf785a990359adb1b39 # v1.1.0
+    uses: Giskard-AI/epure/.github/workflows/issue-command.yml@4d177229e30b06e315dadd8935592a1fa8de8bfe # v1.1.0
     with:
       repository: ${{ github.repository }}
       issue_number: ${{ github.event.issue.number }}
@@ -17,4 +17,6 @@ jobs:
       comment_body: ${{ github.event.comment.body }}
       actor: ${{ github.event.comment.user.login }}
       actor_type: ${{ github.event.comment.user.type }}
-    secrets: inherit
+    secrets:
+      EPURE_AGENT_APP_ID: ${{ secrets.EPURE_AGENT_APP_ID }}
+      EPURE_AGENT_APP_PRIVATE_KEY: ${{ secrets.EPURE_AGENT_APP_PRIVATE_KEY }}
