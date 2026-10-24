@@ -1,0 +1,17 @@
+# SHA-256 — fichiers de l’archive
+# Créé le 2026-10-24
+# SHA256  Taille (octets)  Chemin relatif
+
+8fa2021f72a40933c2cce9d519a430574f01dbb6e15ebde22ace21b7e30bf878        2819  00_LISEZ_MOI.md
+88cf665832dfaecaa725b1d46505e6ff12462c2dec1b75dd02e34ee6cd592f2e       38444  01_Source_originale/Objets Magiques.xlsx
+398f957eefb07590a890b739797489bb53709107b0906fa521f32a08dc43005b       83048  02_Versions_de_travail/Forge_magique_DnD5_plafonds_incidents.xlsx
+81acaf290add479a61000746a7b96cc46d8ae1ff86e5704f02da0d7991d8d60e       47768  02_Versions_de_travail/Forge_magique_et_achats_DnD5.xlsx
+e292d5ec134970630df82c6e96867259b40d1ac85d65ed5ef84fa1c8978a7247       49598  02_Versions_de_travail/Forge_magique_et_achats_DnD5_corrige.xlsx
+44ab47210657b2f84c9045523b846ae290e6083eb0c444b02c0735e9451aebba       51211  02_Versions_de_travail/Forge_magique_et_achats_DnD5_slots_corriges.xlsx
+6e2c88975476794b8a4db5fd9a0ae0aa8e1b76e34c31008e706be139ae38b59a       57449  02_Versions_de_travail/Forge_magique_et_achats_DnD5_variation_marche.xlsx
+d97054b846a16a7e9b4d7c71b8480fbafb222dbaec92740b65f95e32c55052e3      195745  03_Apercus/aperçu_variation_prix.png
+29e88fa71af11218e06ebacfb4d329c9ec8f925e3002f2796e54d85edc2cd44a      128069  03_Apercus/preview_old_market.png
+f406f8fe9ca2f55ff95f7058fe0159eeb7b7dfca5eb54cd3f977679e8662389a      123122  03_Apercus/preview_plafonds_magiques.png
+08902c047698c6c63794fd9926ed8643d2cf4b1295b4d086700dbb738c7711a1        8072  04_Discussions/01_Historique_des_echanges.md
+d7ca52bd5df5eace0dddb8d721265c4befc7bc837b383e097cb84c5a90884641        7992  04_Discussions/02_Solutions_envisagees_et_arbitrages.md
+9ee6a5b48daad651bad124998b3055942d9c2cc874538fe45b886150b2059c0f        8119  05_Compte_rendu/CR_Forge_magique_et_commerce.md
