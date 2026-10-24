@@ -1,0 +1,13 @@
+name: "EPURE Contract Verification"
+on:
+  pull_request:
+    branches: [dev, main, 'feature/**']
+permissions:
+  contents: read
+jobs:
+  verify-contract:
+    uses: Giskard-AI/epure/.github/workflows/epure-check.yml@d5d9dd770ee20c6ab1ec586b6f5ba30072e25d99 # v1.0.0
+    with:
+      repository: ${{ github.repository }}
+      pinned_ref: "Giskard-AI/epure/.github/workflows/epure-check.yml@d5d9dd770ee20c6ab1ec586b6f5ba30072e25d99 # v1.0.0"
+      strict_sha_pinning: true
