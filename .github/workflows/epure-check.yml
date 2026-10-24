@@ -6,8 +6,8 @@ permissions:
   contents: read
 jobs:
   verify-contract:
-    uses: Giskard-AI/epure/.github/workflows/epure-check.yml@2a285c1ae9dc220dab1dd62b21c94cb9da1d6bba # v1.1.0
+    uses: Giskard-AI/epure/.github/workflows/epure-check.yml@9d77e9b8aed7ba64d77888ec1bf218506c977e1e # v1.1.0
     with:
       repository: ${{ github.repository }}
-      pinned_ref: "Giskard-AI/epure/.github/workflows/epure-check.yml@2a285c1ae9dc220dab1dd62b21c94cb9da1d6bba # v1.1.0"
+      pinned_ref: "Giskard-AI/epure/.github/workflows/epure-check.yml@9d77e9b8aed7ba64d77888ec1bf218506c977e1e # v1.1.0"
       strict_sha_pinning: true

@@ -15,7 +15,7 @@ jobs:
     environment: release
     steps:
       - name: Verify Release App boundary
-        uses: Giskard-AI/epure/actions/verify-app-role@2a285c1ae9dc220dab1dd62b21c94cb9da1d6bba # v1.1.0
+        uses: Giskard-AI/epure/actions/verify-app-role@9d77e9b8aed7ba64d77888ec1bf218506c977e1e # v1.1.0
         with:
           app_role: "release"
           operation: "promote_dev_to_main"
