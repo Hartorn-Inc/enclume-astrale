@@ -4,15 +4,13 @@ status: accepted
 # ADR 0001 : Architecture découplée et Modèle de Domaine Pur pour L'Enclume Astrale
 
 ## Contexte
-L'Enclume Astrale est un outil web interactif d'artisanat arcanique et de calcul économique pour les maîtres de jeu et joueurs de D&D 5e et 3.5. L'application doit supporter des calculs de forge précis, une simulation d20, la tarification de munitions et consommables, ainsi qu'une interface réactive et accessible.
+L'Enclume Astrale doit fournir un système fiable de calcul de forge, de tarification de munitions et de simulation de marché pour D&D 5e / 3.5. Le projet requiert une grande maintenabilité, une testabilité unitaire totale et une interface utilisateur réactive.
 
 ## Décision
-1. L'application est développée sous une architecture à domaine pur (Pure Domain Model) entièrement découplé de la vue web.
-2. Le noyau mathématique et les règles métier résident dans `src/domain/` sans aucune dépendance envers le DOM, React ou Vite.
-3. TypeScript strict (`strict: true`, `noImplicitAny: true`, types union stricts) est appliqué à l'ensemble du projet.
-4. La vue est construite avec Vite, React et CSS modulaire sombre conforme WCAG 2.1 AA.
-5. La persistance des configurations favorites s'effectue dans `localStorage` via une couche de sérialisation typée.
+1. Découpage strict entre le noyau de logique métier (`src/domain/`) et l'interface utilisateur (`src/ui/` ou composants React/DOM).
+2. Le domaine métier est implémenté en TypeScript strict, sans aucune dépendance au DOM, au framework graphique ou à des bibliothèques externes non standard.
+3. Stack technique : Node.js LTS, Vite, TypeScript strict, Vitest pour les tests unitaires et d'intégration, et React pour la couche de présentation responsive accessible (WCAG 2.1 AA).
 
 ## Conséquences
-- Les fonctions de calcul sont testables à 100% en isolation complète sous Vitest.
-- Remplacement ou migration possible de la couche d'interface sans impacter l'exactitude des règles de forge.
+- Les fonctions de calcul sont 100 % déterministes et facilement auditables via Vitest.
+- Évolution facilitée des règles arcaniques ou intégration potentielle dans d'autres outils (CLI, bot Discord, VTT) sans réécriture.

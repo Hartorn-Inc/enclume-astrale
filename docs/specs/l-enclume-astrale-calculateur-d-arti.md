@@ -1,58 +1,76 @@
-# Spécification Technique & Fonctionnelle — L'Enclume Astrale
+# Spécification Technique Complète — L'Enclume Astrale
 
-## 1. Vue d'Ensemble & Objectifs
-L'application **L'Enclume Astrale** fournit un moteur d'arbitrage et de calcul d'artisanat magique fidèle aux mécaniques combinées D&D 5e et 3.5 tout en garantissant une totale conformité légale par réécriture technique générique.
+## 1. Introduction et Objectifs
+L'Enclume Astrale est une application web monopage (SPA) responsive permettant de calculer le coût économique d'artisanat d'objets magiques pour D&D 5e et D&D 3.5, de simuler la négociation de marché via un d20 garanti sans dépassement de plafond, et d'administrer les munitions et consommables alchimiques avec profils commutables (5e classique vs 2024).
 
-## 2. Modèle Mathématique Formel
+## 2. Modèle Métier & Formules Mathématiques
 
-### 2.1 Paramètres et Types d'Entrée
-- Catégorie $K \in \{\text{'weapon'}, \text{'armor_shield'}, \text{'wonder_item'}\}$
-  - $C(\text{'weapon'}) = 1.00$
-  - $C(\text{'armor_shield'}) = 0.85$
-  - $C(\text{'wonder_item'}) = 0.80$
-- Bonus d'altération $B \in \{0, 1, 2, 3, 4\}$
-- Slots d'enchantements $S = \sum_{i=1}^k s_i$ où $s_i \ge 1$
+### 2.1 Variables et Coefficients
+- $B \in \{0, 1, 2, 3, 4\}$ : Bonus nu.
+- Effets d'enchantement : chaque effet possède un coût en slots $s_i \ge 1$.
+- $S = \sum s_i$ : Somme des slots d'effets actifs.
+- Catégories et coefficients ($C$) :
+  - `WEAPON` : $C = 1.00$
+  - `ARMOR_SHIELD` : $C = 0.85$
+  - `WONDROUS_ITEM` : $C = 0.80$ ($B=0$ obligatoire)
 
-### 2.2 Invariant d'Intégrité
-$$\forall K \in \{\text{'weapon'}, \text{'armor_shield'}\}, \quad S \le B$$
-Si $S > B$, la fonction de calcul retourne un statut invalide avec message d'erreur explicite et refuse toute émission de devis.
-Pour $K = \text{'wonder_item'}$, $B = 0$ et $S \ge 0$.
+### 2.2 Règle d'Intégrité de Capacité
+Pour toute arme, armure ou bouclier :
+$$S \le B$$
+Si $S > B$, la forge est impossible et renvoie une erreur explicite `CAPACITY_EXCEEDED` sans calcul de prix.
 
-### 2.3 Calculs de Niveaux et Plafonds
-- Niveau de base : $T(B) = \frac{B(B + 1)}{2}$
-- Niveau économique effectif : $N = T(B) + S$
-- Plafond annoncé : $P_{plafond} = \text{Math.round}(C \times 1000 \times N^2)$
-- Coût d'amélioration : $P_{upgrade} = \max(0, P_{plafond}(N_{final}) - P_{plafond}(N_{init}))$
+### 2.3 Calculs des Niveaux et Plafonds
+- Niveau de base : $T(B) = \frac{B(B+1)}{2}$
+- Niveau effectif : $N = T(B) + S$
+- Plafond annoncé : $P_{\text{plafond}} = \text{Math.round}(C \cdot 1000 \cdot N^2)$
 
-### 2.4 Simulation de Marché sous Plafond Garanti
-Pour tout tirage $d20 \in [1, 20]$ :
-$$P_{payé} = \text{Math.round}\left(P_{plafond} \times \min\left(1, \frac{70 + 2 \times d20}{100}\right)\right)$$
+### 2.4 Améliorations
+Si $N_{\text{final}} > N_{\text{init}}$ :
+$$P_{\text{amélioration}} = P_{\text{plafond}}(N_{\text{final}}) - P_{\text{plafond}}(N_{\text{init}})$$
+Si $N_{\text{final}} \le N_{\text{init}}$, l'opération est refusée (`INVALID_UPGRADE_TIER`).
 
-Table des événements associés :
-| Jet $d20$ | Multiplicateur | Remise | Statut Marché | Complication |
-|---|---|---|---|---|
-| 1 | 72% | 28% | Opportunité exceptionnelle | Aucune |
-| 2–5 | 74%–80% | 26%–20% | Affaire très avantageuse | Aucune |
-| 6–10 | 82%–90% | 18%–10% | Marché favorable | Aucune |
-| 11–14 | 92%–98% | 8%–2% | Prix du cours habituel | Aucune |
-| 15 | 100% | 0% | Prix plafond nominal | Aucune |
-| 16–17 | 100% | 0% | Prix plafond | Complication mineure (ingrédient ou faveur requise) |
-| 18–19 | 100% | 0% | Prix plafond | Incident d'atelier (défaut d'alliage, intervention requise) |
-| 20 | 100% | 0% | Prix plafond | Complication majeure (quête arcanique nécessaire) |
+### 2.5 Simulation de Marché d20
+Formule du ratio de prix payé :
+$$\text{ratio}(d20) = \min\left(1.0, \frac{70 + 2 \cdot d20}{100}\right)$$
+$$P_{\text{payé}} = \text{Math.round}(P_{\text{plafond}} \cdot \text{ratio}(d20))$$
 
-### 2.5 Munitions & Consommables
-- Plafond d'un lot de $Q$ munitions pour un niveau effectif $N$ :
-  $$P_{munitions} = \text{Math.round}\left(\frac{P_{plafond\_arme}(N)}{50}\right) \times Q + Q \times \sum \text{suppléments}$$
-  Suppléments unitaires :
-  - Incassable : +20 po
-  - Percutante : +20 po
-  - Argentée : +10 po
-- Potions de soins (commutable classique 5e / variante 2024) :
-  - Commune (2d4+2) : 50 po
-  - Peu commune (4d4+4) : 500 po (Variante : 200 po)
-  - Rare (8d4+8) : 5 000 po (Variante : 2 000 po)
-  - Très rare (10d4+20) : 50 000 po (Variante : 20 000 po)
-- Consommables spéciaux :
+Complications narratives :
+- $d20 = 1$ : Remise maximale de 28 % (prix = 72 %), aubaine du marché.
+- $d20 \in [2, 5]$ : Affaire très avantageuse (74 % – 80 %).
+- $d20 \in [6, 10]$ : Marché favorable (82 % – 90 %).
+- $d20 \in [11, 14]$ : Prix du cours habituel (92 % – 98 %).
+- $d20 = 15$ : Plafond nominal (100 %), aucune complication.
+- $d20 \in [16, 17]$ : Plafond nominal (100 %), Complication mineure (composant spécifique ou service requis).
+- $d20 \in [18, 19]$ : Plafond nominal (100 %), Incident d'atelier (dégât mineur, délai ou aléa d'artisanat).
+- $d20 = 20$ : Plafond nominal (100 %), Complication majeure (quête arcanique ou pacte d'artisan requis).
+
+### 2.6 Munitions et Consommables
+- **Munitions** : $P_{\text{munitions}} = \text{Math.round}\left(\left(\frac{1000 \cdot N^2}{50}\right) \cdot Q\right) + \sum(\text{suppléments} \cdot Q)$
+  - Incassable : +20 po / unité
+  - Percutante : +20 po / unité
+  - Argentée : +10 po / unité
+- **Potions de soin** :
+  - Commune : 50 po
+  - Peu commune : 500 po (Classique) / 200 po (2024)
+  - Rare : 5 000 po (Classique) / 2 000 po (2024)
+  - Très rare : 50 000 po (Classique) / 20 000 po (2024)
+- **Consommables spéciaux** :
   - Poudre de disparition : 250 po / dose
   - Onguent de soin : 150 po
   - Colle universelle : 2 000 po
+
+## 3. Vecteurs de Test de Référence (Golden Cases)
+1. Arme $B=1, S=0 \Rightarrow N=1 \Rightarrow P = 1\,000$ po.
+2. Arme $B=2, S=0 \Rightarrow N=3 \Rightarrow P = 9\,000$ po.
+3. Arme $B=2$, Sournoise (1) + Frugale (1) ($S=2$) $\Rightarrow N=5 \Rightarrow P = 25\,000$ po.
+4. Arme $B=2, S=3 \Rightarrow$ Invalide ($S > B$).
+5. Armure $B=2$ vers $B=3$ : $0.85 \cdot (36\,000 - 9\,000) = 22\,950$ po.
+6. Marché sur $22\,950$ po :
+   - $d20 = 1 \Rightarrow 22\,950 \cdot 0.72 = 16\,524$ po.
+   - $d20 = 3 \Rightarrow 22\,950 \cdot 0.76 = 17\,442$ po.
+7. Marché sur $25\,000$ po :
+   - $d20 = 15 \Rightarrow 25\,000$ po (aucun incident).
+   - $d20 = 18 \Rightarrow 25\,000$ po (incident d'atelier).
+8. Munitions :
+   - 10 flèches $+1$ ($N=1$) : $\frac{1000}{50} \cdot 10 = 200$ po.
+   - 10 flèches $+2$ ($N=3$) : $\frac{9000}{50} \cdot 10 = 1\,800$ po.
