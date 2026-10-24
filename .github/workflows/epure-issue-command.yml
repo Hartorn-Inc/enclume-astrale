@@ -9,7 +9,7 @@ permissions:
   checks: write
 jobs:
   authorize-and-dispatch:
-    uses: Giskard-AI/epure/.github/workflows/issue-command.yml@4d177229e30b06e315dadd8935592a1fa8de8bfe # v1.1.0
+    uses: Giskard-AI/epure/.github/workflows/issue-command.yml@cdf2ae6a470583864db79ba41625f37b47a2a12f # v1.1.0
     with:
       repository: ${{ github.repository }}
       issue_number: ${{ github.event.issue.number }}
