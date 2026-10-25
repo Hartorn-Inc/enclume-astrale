@@ -1,4 +1,4 @@
-# Managed by Giskard-AI/epure@7ad8d881cfcc78e14fcc24a781f5c87b1db178a4 # v1.1.0
+# Managed by Giskard-AI/epure@c76168e45ac9282ddaaa5db9bc8c4ca1f975eb9a # v1.1.0
 # Continuous Integration: Zizmor workflow security audit + Stack-aware Format, Lint/Typecheck, Tests, Build & E2E.
 name: "CI"
 
@@ -65,8 +65,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: read
-      actions: read
+      contents: read # checkout the workflows zizmor audits
+      actions: read # zizmor reads action metadata for online audits
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

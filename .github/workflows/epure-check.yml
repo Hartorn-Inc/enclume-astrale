@@ -2,12 +2,16 @@ name: "EPURE Contract Verification"
 on:
   pull_request:
     branches: [dev, main, 'feature/**']
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
-  contents: read
+  contents: read # read consumer workflow contract
 jobs:
   verify-contract:
-    uses: Giskard-AI/epure/.github/workflows/epure-check.yml@7ad8d881cfcc78e14fcc24a781f5c87b1db178a4 # v1.1.0
+    name: "Verify EPURE Consumer Contract"
+    uses: Giskard-AI/epure/.github/workflows/epure-check.yml@c76168e45ac9282ddaaa5db9bc8c4ca1f975eb9a # v1.1.0
     with:
       repository: ${{ github.repository }}
-      pinned_ref: "Giskard-AI/epure/.github/workflows/epure-check.yml@7ad8d881cfcc78e14fcc24a781f5c87b1db178a4 # v1.1.0"
+      pinned_ref: "Giskard-AI/epure/.github/workflows/epure-check.yml@c76168e45ac9282ddaaa5db9bc8c4ca1f975eb9a # v1.1.0"
       strict_sha_pinning: true
