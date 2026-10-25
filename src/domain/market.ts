@@ -2,132 +2,178 @@ export type MarketOutcomeCategory =
   | 'EXCEPTIONAL_OPPORTUNITY'
   | 'VERY_ADVANTAGEOUS'
   | 'FAVORABLE_MARKET'
-  | 'NORMAL_MARKET'
-  | 'NOMINAL_PRICE'
+  | 'STANDARD_RATE'
+  | 'NOMINAL_CEILING'
   | 'MINOR_COMPLICATION'
   | 'WORKSHOP_INCIDENT'
   | 'MAJOR_COMPLICATION';
 
+export type ComplicationSeverity = 'NONE' | 'MINOR' | 'WORKSHOP_INCIDENT' | 'MAJOR';
+
+export interface MarketComplication {
+  hasComplication: boolean;
+  severity: ComplicationSeverity;
+  label: string;
+  description: string;
+}
+
 export interface MarketSimulationResult {
-  d20Roll: number;
   basePrice: number;
-  finalPrice: number;
+  d20Roll: number;
+  priceRatio: number;
   discountRate: number;
-  percentageApplied: number;
-  hasIncident: boolean;
-  incidentDescription?: string;
-  statusLabel: string;
+  finalPrice: number;
+  savedAmount: number;
   category: MarketOutcomeCategory;
+  categoryLabel: string;
+  complication: MarketComplication;
 }
 
-interface RollClassification {
-  category: MarketOutcomeCategory;
-  statusLabel: string;
-  hasIncident: boolean;
-  incidentDescription?: string;
+export function rollD20(): number {
+  return Math.floor(Math.random() * 20) + 1;
 }
 
-export function classifyD20Roll(d20: number): RollClassification {
-  if (d20 === 1) {
+export function resolveMarketOutcome(d20Roll: number): {
+  category: MarketOutcomeCategory;
+  categoryLabel: string;
+  complication: MarketComplication;
+} {
+  if (!Number.isInteger(d20Roll) || d20Roll < 1 || d20Roll > 20) {
+    throw new RangeError(
+      `Résultat de d20 invalide: ${d20Roll}. Le jet de d20 doit être un entier compris entre 1 et 20.`
+    );
+  }
+
+  if (d20Roll === 1) {
     return {
       category: 'EXCEPTIONAL_OPPORTUNITY',
-      statusLabel: 'Opportunité exceptionnelle (remise maximale de 28 %)',
-      hasIncident: false,
+      categoryLabel: 'Opportunité exceptionnelle',
+      complication: {
+        hasComplication: false,
+        severity: 'NONE',
+        label: 'Aucun incident',
+        description: 'Opportunité exceptionnelle : remise maximale de 28 % accordée sur le cours.',
+      },
     };
   }
 
-  if (d20 >= 2 && d20 <= 5) {
+  if (d20Roll >= 2 && d20Roll <= 5) {
     return {
       category: 'VERY_ADVANTAGEOUS',
-      statusLabel: 'Affaire très avantageuse',
-      hasIncident: false,
+      categoryLabel: 'Affaire très avantageuse',
+      complication: {
+        hasComplication: false,
+        severity: 'NONE',
+        label: 'Aucun incident',
+        description: 'Affaire très avantageuse : négociation particulièrement favorable sans accroc.',
+      },
     };
   }
 
-  if (d20 >= 6 && d20 <= 10) {
+  if (d20Roll >= 6 && d20Roll <= 10) {
     return {
       category: 'FAVORABLE_MARKET',
-      statusLabel: 'Marché favorable',
-      hasIncident: false,
+      categoryLabel: 'Marché favorable',
+      complication: {
+        hasComplication: false,
+        severity: 'NONE',
+        label: 'Aucun incident',
+        description: "Marché favorable : composants obtenus à des conditions d'approvisionnement avantageuses.",
+      },
     };
   }
 
-  if (d20 >= 11 && d20 <= 14) {
+  if (d20Roll >= 11 && d20Roll <= 14) {
     return {
-      category: 'NORMAL_MARKET',
-      statusLabel: 'Prix du cours habituel',
-      hasIncident: false,
+      category: 'STANDARD_RATE',
+      categoryLabel: 'Prix du cours habituel',
+      complication: {
+        hasComplication: false,
+        severity: 'NONE',
+        label: 'Aucun incident',
+        description: 'Prix du cours habituel : transaction standard aux tarifs du marché ordinaire.',
+      },
     };
   }
 
-  if (d20 === 15) {
+  if (d20Roll === 15) {
     return {
-      category: 'NOMINAL_PRICE',
-      statusLabel: 'Prix plafond nominal (sans incident)',
-      hasIncident: false,
+      category: 'NOMINAL_CEILING',
+      categoryLabel: 'Prix plafond nominal',
+      complication: {
+        hasComplication: false,
+        severity: 'NONE',
+        label: 'Aucun incident',
+        description: "Prix plafond nominal atteint sans complication ni incident d'artisanat.",
+      },
     };
   }
 
-  if (d20 >= 16 && d20 <= 17) {
+  if (d20Roll >= 16 && d20Roll <= 17) {
     return {
       category: 'MINOR_COMPLICATION',
-      statusLabel: 'Complication mineure (composant spécifique ou service requis)',
-      hasIncident: true,
-      incidentDescription: 'Composant spécifique rare ou service artisanal requis avant livraison.',
+      categoryLabel: 'Complication mineure',
+      complication: {
+        hasComplication: true,
+        severity: 'MINOR',
+        label: 'Complication mineure',
+        description: 'Composant spécifique ou service requis pour mener à bien la forge.',
+      },
     };
   }
 
-  if (d20 >= 18 && d20 <= 19) {
+  if (d20Roll >= 18 && d20Roll <= 19) {
     return {
       category: 'WORKSHOP_INCIDENT',
-      statusLabel: "Incident d'atelier (aléa d'artisanat nécessitant l'action du joueur)",
-      hasIncident: true,
-      incidentDescription: "Aléa critique à l'atelier d'enchantement nécessitant l'intervention du joueur.",
+      categoryLabel: "Incident d'atelier",
+      complication: {
+        hasComplication: true,
+        severity: 'WORKSHOP_INCIDENT',
+        label: "Incident d'atelier",
+        description: "Aléa d'artisanat nécessitant l'action du joueur pour stabiliser le foyer de forge.",
+      },
     };
   }
 
-  if (d20 === 20) {
-    return {
-      category: 'MAJOR_COMPLICATION',
-      statusLabel: 'Complication majeure (quête arcanique ou faveur de haut rang requise)',
-      hasIncident: true,
-      incidentDescription: 'Quête arcanique périlleuse ou faveur politique majeure requise pour sceller la forge.',
-    };
-  }
-
-  throw new Error(`Le tirage d20 doit être un entier compris entre 1 et 20. Reçu: ${d20}`);
+  return {
+    category: 'MAJOR_COMPLICATION',
+    categoryLabel: 'Complication majeure',
+    complication: {
+      hasComplication: true,
+      severity: 'MAJOR',
+      label: 'Complication majeure',
+      description: "Quête arcanique ou faveur de haut rang requise pour sceller l'enchantement.",
+    },
+  };
 }
 
 export function simulateMarket(basePrice: number, d20Roll: number): MarketSimulationResult {
-  if (!Number.isFinite(basePrice) || basePrice < 0) {
-    throw new Error(`Le prix de base doit être un nombre positif ou nul. Reçu: ${basePrice}`);
+  if (typeof basePrice !== 'number' || !Number.isFinite(basePrice) || basePrice < 0) {
+    throw new RangeError(
+      `Prix de base invalide: ${basePrice}. Le prix de base doit être un nombre fini supérieur ou égal à 0.`
+    );
   }
 
-  if (!Number.isInteger(d20Roll) || d20Roll < 1 || d20Roll > 20) {
-    throw new Error(`Le tirage d20 doit être un entier entre 1 et 20. Reçu: ${d20Roll}`);
-  }
+  const outcome = resolveMarketOutcome(d20Roll);
 
-  const rawPercentage = 70 + 2 * d20Roll;
-  const percentageApplied = Math.min(100, rawPercentage);
-  const multiplier = Math.min(1, rawPercentage / 100);
-  const finalPrice = Math.round(basePrice * multiplier);
+  // Formule CDC : P_payé = P_plafond * min(1, (70 + 2 * d20) / 100)
+  const rawRatio = (70 + 2 * d20Roll) / 100;
+  const priceRatio = Math.min(1, Math.round(rawRatio * 100) / 100);
+  const discountRate = Math.max(0, Math.round((1 - priceRatio) * 100) / 100);
 
-  if (finalPrice > basePrice) {
-    throw new Error(`Violation de l invariant : P_payé (${finalPrice}) ne peut excéder P_plafond (${basePrice})`);
-  }
-
-  const discountRate = Math.round((1 - percentageApplied / 100) * 100) / 100;
-  const classification = classifyD20Roll(d20Roll);
+  const calculated = Math.round(basePrice * Math.min(1, rawRatio));
+  const finalPrice = Math.min(basePrice, Math.max(0, calculated));
+  const savedAmount = basePrice - finalPrice;
 
   return {
-    d20Roll,
     basePrice,
-    finalPrice,
+    d20Roll,
+    priceRatio,
     discountRate,
-    percentageApplied,
-    hasIncident: classification.hasIncident,
-    incidentDescription: classification.incidentDescription,
-    statusLabel: classification.statusLabel,
-    category: classification.category,
+    finalPrice,
+    savedAmount,
+    category: outcome.category,
+    categoryLabel: outcome.categoryLabel,
+    complication: outcome.complication,
   };
 }

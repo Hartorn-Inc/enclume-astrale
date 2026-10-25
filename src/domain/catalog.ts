@@ -1,180 +1,215 @@
-import { ItemCategory } from './forge';
+import type { ItemCategory } from './forge';
 
-export interface Enchantment {
+export type RulesetVersion = '5e_2014' | '5e_2024';
+
+export type HealingPotionRarity = 'COMMON' | 'UNCOMMON' | 'RARE' | 'VERY_RARE';
+
+export interface EnchantmentDefinition {
   id: string;
   name: string;
-  applicableCategories: ItemCategory[];
-  slots: 1 | 2 | 3 | 4;
+  cost: number;
+  categories: readonly ItemCategory[];
   description: string;
 }
 
-export type RulesetProfile = 'CLASSIC_5E' | 'REVISED_2024';
-
-export type HealingPotionTier = 'COMMON' | 'UNCOMMON' | 'RARE' | 'VERY_RARE';
-
 export interface HealingPotionDefinition {
-  tier: HealingPotionTier;
+  id: string;
   name: string;
-  diceFormula: string;
-  priceClassic: number;
-  price2024: number;
+  rarity: HealingPotionRarity;
+  diceRoll: string;
+  prices: Readonly<Record<RulesetVersion, number>>;
+  description: string;
 }
 
-export interface SpecialConsumable {
+export interface SpecialConsumableDefinition {
   id: string;
   name: string;
   price: number;
+  unit: string;
   description: string;
 }
 
-export const ENCHANTMENT_CATALOG: readonly Enchantment[] = [
+export const ENCHANTMENT_CATALOG: readonly EnchantmentDefinition[] = [
   {
     id: 'sournoise',
     name: 'Sournoise',
-    applicableCategories: ['WEAPON'],
-    slots: 1,
-    description: 'Canalise les frappes furtives, infligeant un surcroît de dégâts perçants lors des attaques avec avantage.',
+    cost: 1,
+    categories: ['WEAPON'],
+    description: "Augmente la létalité des frappes d'opportunité et d'embuscade (+1d6 dégâts en cas d'avantage ou de surprise).",
   },
   {
     id: 'frugale',
     name: 'Frugale',
-    applicableCategories: ['WEAPON'],
-    slots: 1,
-    description: 'Harmonise les réserves cinétiques pour préserver les munitions et réduire la consommation arcanique.',
+    cost: 1,
+    categories: ['WEAPON', 'WONDROUS_ITEM'],
+    description: "Préserve l'énergie arcanique interne en réduisant la dépense de charges ou de munitions consommées.",
   },
   {
-    id: 'tranchant-spectral',
-    name: 'Tranchant spectral',
-    applicableCategories: ['WEAPON'],
-    slots: 2,
-    description: 'La lame ignore une partie de l armure physique en manifestant une résonance éthérée.',
-  },
-  {
-    id: 'frappe-foudroyante',
-    name: 'Frappe foudroyante',
-    applicableCategories: ['WEAPON'],
-    slots: 3,
-    description: 'Déclenche une décharge de foudre arcanique sur un coup critique, aveuglant la cible.',
-  },
-  {
-    id: 'vorpale-astrale',
-    name: 'Vorpale astrale',
-    applicableCategories: ['WEAPON'],
-    slots: 4,
-    description: 'Une énergie de distorsion pure capable de sectionner les liens d essence vitale.',
-  },
-  {
-    id: 'rempart-etanche',
-    name: 'Rempart étanche',
-    applicableCategories: ['ARMOR_SHIELD'],
-    slots: 1,
-    description: 'Scelle les jointures de la défense contre les émanations gazeuses, acides et aquatiques.',
-  },
-  {
-    id: 'defense-elementaire',
+    id: 'defense_elementaire',
     name: 'Défense élémentaire',
-    applicableCategories: ['ARMOR_SHIELD'],
-    slots: 2,
-    description: 'Confère une résistance modulable aux attaques d énergie élémentaire (feu, froid ou électricité).',
+    cost: 1,
+    categories: ['ARMOR_SHIELD'],
+    description: "Atténue les flux d'énergie destructrice (résistance modulable feu, froid, foudre ou acide).",
   },
   {
-    id: 'garde-arcanique',
-    name: 'Garde arcanique',
-    applicableCategories: ['ARMOR_SHIELD'],
-    slots: 3,
-    description: 'Génère une barrière prismatique absorbant les projectiles magiques et sorts de force.',
+    id: 'gardienne',
+    name: 'Gardienne',
+    cost: 1,
+    categories: ['ARMOR_SHIELD'],
+    description: "Renforce la posture défensive en offrant un bonus de parade réactif contre les coups critiques.",
   },
   {
-    id: 'fortresse-inebranlable',
-    name: 'Forteresse inébranlable',
-    applicableCategories: ['ARMOR_SHIELD'],
-    slots: 4,
-    description: 'Ancre le porteur au plan matériel, immunisant contre les renversements et téléportations forcées.',
+    id: 'frappe_spectrale',
+    name: 'Frappe spectrale',
+    cost: 1,
+    categories: ['WEAPON'],
+    description: "Permet de toucher sans pénalité les créatures éthérées, immatérielles ou protégées par distorsion phasique.",
   },
   {
-    id: 'focalisateur-dimensionnel',
-    name: 'Focalisateur dimensionnel',
-    applicableCategories: ['WONDROUS_ITEM'],
-    slots: 2,
-    description: 'Élargit la portée et la précision des manipulations magiques autonomes de l objet.',
+    id: 'ardente',
+    name: 'Ardente',
+    cost: 2,
+    categories: ['WEAPON'],
+    description: "Embrase la surface d'un feu arcanique persistant infligeant +1d6 dégâts de feu continus.",
   },
   {
-    id: 'condensateur-ethere',
-    name: 'Condensateur éthéré',
-    applicableCategories: ['WONDROUS_ITEM'],
-    slots: 3,
-    description: 'Stocke une charge d énergie arcanique renouvelable pour alimenter les effets autonomes.',
+    id: 'sanctifiee',
+    name: 'Sanctifiée',
+    cost: 2,
+    categories: ['WEAPON', 'ARMOR_SHIELD'],
+    description: "Bénie par les puissances de l'ordre, repoussant les abominations d'outre-monde et contrant la nécrose.",
+  },
+  {
+    id: 'aceree',
+    name: 'Acérée',
+    cost: 2,
+    categories: ['WEAPON'],
+    description: "Aiguise le fil de l'arme jusqu'à un alignement parfait, étendant la plage de menace critique.",
+  },
+  {
+    id: 'bastion_arcanique',
+    name: 'Bastion arcanique',
+    cost: 2,
+    categories: ['ARMOR_SHIELD'],
+    description: "Déploie une matrice de dissipation résonante absorbant les sorts offensifs de faible magnitude.",
+  },
+  {
+    id: 'vorpaline',
+    name: 'Vorpaline',
+    cost: 3,
+    categories: ['WEAPON'],
+    description: "Sur un coup critique naturel dévastateur, inflige des traumatismes majeurs pouvant sectionner net un membre vulnérable.",
+  },
+  {
+    id: 'reflexion_egide',
+    name: "Réflexion d'égide",
+    cost: 3,
+    categories: ['ARMOR_SHIELD'],
+    description: "Détourne les projectiles magiques et faisceaux ciblés vers leur émetteur d'origine lors d'une parade.",
+  },
+  {
+    id: 'ancrage_astral',
+    name: 'Ancrage astral',
+    cost: 4,
+    categories: ['WEAPON', 'ARMOR_SHIELD', 'WONDROUS_ITEM'],
+    description: "Verrouille les lignes arcaniques dimensionnelles, neutralisant les sauts téléportés hostiles dans la zone.",
   },
 ];
 
-export const HEALING_POTIONS: Record<HealingPotionTier, HealingPotionDefinition> = {
-  COMMON: {
-    tier: 'COMMON',
-    name: 'Potion de soins standard',
-    diceFormula: '2d4+2',
-    priceClassic: 50,
-    price2024: 50,
-  },
-  UNCOMMON: {
-    tier: 'UNCOMMON',
-    name: 'Potion de soins supérieure',
-    diceFormula: '4d4+4',
-    priceClassic: 500,
-    price2024: 200,
-  },
-  RARE: {
-    tier: 'RARE',
-    name: 'Potion de soins suprême',
-    diceFormula: '8d4+8',
-    priceClassic: 5000,
-    price2024: 2000,
-  },
-  VERY_RARE: {
-    tier: 'VERY_RARE',
-    name: 'Potion de soins magistrale',
-    diceFormula: '10d4+20',
-    priceClassic: 50000,
-    price2024: 20000,
-  },
-};
-
-export const SPECIAL_CONSUMABLES: readonly SpecialConsumable[] = [
+export const HEALING_POTIONS_CATALOG: readonly HealingPotionDefinition[] = [
   {
-    id: 'poudre-disparition',
+    id: 'potion_healing_common',
+    name: 'Potion de soins (Commune)',
+    rarity: 'COMMON',
+    diceRoll: '2d4+2',
+    prices: {
+      '5e_2014': 50,
+      '5e_2024': 50,
+    },
+    description: 'Breuvage revigorant restaurant 2d4+2 points de vie lorsqu’il est ingéré.',
+  },
+  {
+    id: 'potion_healing_uncommon',
+    name: 'Potion de soins supérieurs (Peu commune)',
+    rarity: 'UNCOMMON',
+    diceRoll: '4d4+4',
+    prices: {
+      '5e_2014': 500,
+      '5e_2024': 200,
+    },
+    description: 'Élixir thérapeutique restaurant 4d4+4 points de vie lorsqu’il est ingéré.',
+  },
+  {
+    id: 'potion_healing_rare',
+    name: 'Potion de soins majeurs (Rare)',
+    rarity: 'RARE',
+    diceRoll: '8d4+8',
+    prices: {
+      '5e_2014': 5000,
+      '5e_2024': 2000,
+    },
+    description: 'Philtre puissant restaurant 8d4+8 points de vie lorsqu’il est ingéré.',
+  },
+  {
+    id: 'potion_healing_very_rare',
+    name: 'Potion de soins suprêmes (Très rare)',
+    rarity: 'VERY_RARE',
+    diceRoll: '10d4+20',
+    prices: {
+      '5e_2014': 50000,
+      '5e_2024': 20000,
+    },
+    description: 'Panacée arcanique suprême restaurant 10d4+20 points de vie lorsqu’elle est ingérée.',
+  },
+];
+
+export const SPECIAL_CONSUMABLES_CATALOG: readonly SpecialConsumableDefinition[] = [
+  {
+    id: 'dust_of_disappearance',
     name: 'Poudre de disparition',
     price: 250,
-    description: 'Une pincée rend les cibles affectées invisibles pendant une brève période.',
+    unit: 'dose',
+    description: 'Poudre cristalline rendant les cibles saupoudrées totalement invisibles durant 2d4 minutes.',
   },
   {
-    id: 'onguent-soin',
+    id: 'keoghtom_ointment',
     name: 'Onguent de soin',
     price: 150,
-    description: 'Pâte alchimique régénératrice pour neutraliser les toxines et refermer les plaies.',
+    unit: 'dose',
+    description: 'Substance médicinale arcanique restaurant 1d8+2 points de vie ou neutralisant poisons et maladies.',
   },
   {
-    id: 'colle-universelle',
+    id: 'sovereign_glue',
     name: 'Colle universelle',
     price: 2000,
-    description: 'Adhésif d une puissance arcanique irréversible capable de souder tout matériau.',
+    unit: 'flacon',
+    description: 'Adhésif alchimique indissoluble soudant définitivement toute surface de contact.',
   },
 ];
 
-export function getEnchantmentById(id: string): Enchantment | undefined {
-  return ENCHANTMENT_CATALOG.find((ench) => ench.id === id);
+export function findEnchantmentById(id: string): EnchantmentDefinition | undefined {
+  return ENCHANTMENT_CATALOG.find((e) => e.id === id);
 }
 
-export function getEnchantmentsByCategory(category: ItemCategory): Enchantment[] {
-  return ENCHANTMENT_CATALOG.filter((ench) => ench.applicableCategories.includes(category));
+export function getEnchantmentsByCategory(category: ItemCategory): EnchantmentDefinition[] {
+  return ENCHANTMENT_CATALOG.filter((e) => e.categories.includes(category));
 }
 
-export function getHealingPotionPrice(tier: HealingPotionTier, ruleset: RulesetProfile): number {
-  const potion = HEALING_POTIONS[tier];
+export function getHealingPotionPrice(
+  rarity: HealingPotionRarity,
+  ruleset: RulesetVersion = '5e_2014'
+): number {
+  const potion = HEALING_POTIONS_CATALOG.find((p) => p.rarity === rarity);
   if (!potion) {
-    throw new Error(`Tier de potion inconnu : ${tier}`);
+    throw new RangeError(`Rareté de potion de soins inconnue : ${rarity}`);
   }
-  return ruleset === 'REVISED_2024' ? potion.price2024 : potion.priceClassic;
+  const price = potion.prices[ruleset];
+  if (price === undefined) {
+    throw new RangeError(`Profil de règles inconnu : ${ruleset}`);
+  }
+  return price;
 }
 
-export function getSpecialConsumableById(id: string): SpecialConsumable | undefined {
-  return SPECIAL_CONSUMABLES.find((item) => item.id === id);
+export function getHealingPotion(rarity: HealingPotionRarity): HealingPotionDefinition | undefined {
+  return HEALING_POTIONS_CATALOG.find((p) => p.rarity === rarity);
 }
