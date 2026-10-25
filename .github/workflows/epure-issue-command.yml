@@ -22,7 +22,7 @@ jobs:
     steps:
       - name: Run pre-bundled EPURE authorization gate
         id: gate
-        uses: Giskard-AI/epure/actions/authorize-command@3a70947d97c3d188c90eec49864537d0fb458d49 # v1.1.0
+        uses: Giskard-AI/epure/actions/authorize-command@7f9f5aafa90acb68c5374cf00833881c0467cf67 # v1.1.0
         with:
           repository: ${{ github.repository }}
           issue_number: ${{ github.event.issue.number }}
@@ -50,7 +50,7 @@ jobs:
     steps:
       - name: Run pre-bundled EPURE issue orchestrator
         id: orchestrate
-        uses: Giskard-AI/epure/actions/orchestrate-issue@3a70947d97c3d188c90eec49864537d0fb458d49 # v1.1.0
+        uses: Giskard-AI/epure/actions/orchestrate-issue@7f9f5aafa90acb68c5374cf00833881c0467cf67 # v1.1.0
         with:
           repository: ${{ github.repository }}
           issue_number: ${{ github.event.issue.number }}

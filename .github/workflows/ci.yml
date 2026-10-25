@@ -1,4 +1,4 @@
-# Managed by Giskard-AI/epure@3a70947d97c3d188c90eec49864537d0fb458d49 # v1.1.0
+# Managed by Giskard-AI/epure@7f9f5aafa90acb68c5374cf00833881c0467cf67 # v1.1.0
 # Continuous Integration: Zizmor workflow security audit + Stack-aware Format, Lint/Typecheck, Tests, Build & E2E.
 name: "CI"
 
