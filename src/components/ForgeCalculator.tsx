@@ -34,10 +34,10 @@ export const ForgeCalculator: React.FC<ForgeCalculatorProps> = ({
     upgradeTargetSlots,
   } = forgeState;
 
-  // Calcul du devis de création directe
+  // Calcul du devis de création directe en filtrant strictement par catégorie active pour éliminer les slots fantômes
   const selectedEnchantments = selectedEnchantmentIds
     .map((id) => findEnchantmentById(id))
-    .filter((e): e is NonNullable<typeof e> => e !== undefined);
+    .filter((e): e is NonNullable<typeof e> => e !== undefined && e.categories.includes(category));
 
   const totalDirectSlots = selectedEnchantments.reduce((sum, e) => sum + e.cost, 0);
 
