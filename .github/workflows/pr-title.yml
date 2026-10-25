@@ -1,11 +1,14 @@
-# Managed by Giskard-AI/epure@7ad8d881cfcc78e14fcc24a781f5c87b1db178a4 # v1.1.0
+# Managed by Giskard-AI/epure@c76168e45ac9282ddaaa5db9bc8c4ca1f975eb9a # v1.1.0
 name: "Conventional Commit PR Title"
 on:
   pull_request:
     types: [opened, edited, synchronize, reopened]
     branches: [dev, main, 'feature/**']
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
-  contents: read
+  contents: read # read pull request metadata
 jobs:
   pr-title:
     name: "PR title"
