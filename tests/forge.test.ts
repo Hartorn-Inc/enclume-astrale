@@ -185,6 +185,23 @@ describe('calculateUpgrade - CDC Golden Test Cases', () => {
     });
   });
 
+  it('Arme +1 nue (N=1) vers +2 nue (N=3) = 8 000 po', () => {
+    const res = calculateUpgrade({
+      category: 'WEAPON',
+      initialTier: 1,
+      finalTier: 3,
+    });
+    expect(res).toEqual({
+      isValid: true,
+      category: 'WEAPON',
+      initialTier: 1,
+      finalTier: 3,
+      initialPrice: 1000,
+      finalPrice: 9000,
+      upgradePrice: 8000,
+    });
+  });
+
   it.each([
     { init: 3, final: 3 },
     { init: 4, final: 2 },
@@ -251,12 +268,30 @@ describe('calculateAmmoCraft - CDC Golden Test Cases', () => {
     });
   });
 
+  it('adds supplementPerUnit accurately for ammo batches', () => {
+    const res = calculateAmmoCraft({
+      effectiveTier: 1,
+      quantity: 10,
+      supplementPerUnit: 25,
+    });
+    expect(res).toEqual({
+      isValid: true,
+      effectiveTier: 1,
+      quantity: 10,
+      baseBatchPrice: 200,
+      supplementsPrice: 250,
+      totalPrice: 450,
+    });
+  });
+
   it.each([
-    { qty: 0, tier: 1, error: 'INVALID_QUANTITY' },
-    { qty: -5, tier: 1, error: 'INVALID_QUANTITY' },
-    { qty: 10, tier: 0, error: 'INVALID_EFFECTIVE_TIER' },
-    { qty: 10, tier: -1, error: 'INVALID_EFFECTIVE_TIER' },
-  ])('rejects invalid ammo craft arguments: %j', ({ qty, tier, error }) => {
+    { tier: 0, qty: 10, error: 'INVALID_EFFECTIVE_TIER' },
+    { tier: -1, qty: 10, error: 'INVALID_EFFECTIVE_TIER' },
+    { tier: 1, qty: 0, error: 'INVALID_QUANTITY' },
+    { tier: 1, qty: -5, error: 'INVALID_QUANTITY' },
+    { tier: 1.5, qty: 10, error: 'INVALID_EFFECTIVE_TIER' },
+    { tier: 1, qty: 2.5, error: 'INVALID_QUANTITY' },
+  ])('should reject invalid ammo parameters: %j', ({ tier, qty, error }) => {
     const res = calculateAmmoCraft({
       effectiveTier: tier,
       quantity: qty,
