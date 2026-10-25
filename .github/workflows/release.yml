@@ -20,7 +20,7 @@ jobs:
       contents: write # promote dev to main and push immutable release tag
     steps:
       - name: Verify Release App boundary
-        uses: Giskard-AI/epure/actions/verify-app-role@7f9f5aafa90acb68c5374cf00833881c0467cf67 # v1.1.0
+        uses: Giskard-AI/epure/actions/verify-app-role@f7116c4156b839159cb6a3a61e190d333c66d35a # v1.3.0
         with:
           app_role: "release"
           operation: "promote_dev_to_main"
