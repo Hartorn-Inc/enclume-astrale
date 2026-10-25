@@ -1,4 +1,4 @@
-# Managed by Giskard-AI/epure@c76168e45ac9282ddaaa5db9bc8c4ca1f975eb9a # v1.1.0
+# Managed by Giskard-AI/epure@d1e4b1d04d28b2668f154452dcd0e10a4b974f05 # v1.1.0
 name: "Conventional Commit PR Title"
 on:
   pull_request:
