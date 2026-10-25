@@ -131,6 +131,14 @@ export function computeTierPrice(category: ItemCategory, effectiveTier: number):
 export function calculateForgeCraft(request: ForgeCraftRequest): ForgeCraftResult {
   const { category, alterationBonus } = request;
 
+  if (!CATEGORY_COEFFICIENTS[category]) {
+    return {
+      isValid: false,
+      error: 'INVALID_PARAMETERS',
+      message: `Unsupported category: ${category}`,
+    };
+  }
+
   if (!Number.isInteger(alterationBonus) || alterationBonus < 0 || alterationBonus > 4) {
     return {
       isValid: false,
@@ -201,6 +209,14 @@ export function calculateForgeCraft(request: ForgeCraftRequest): ForgeCraftResul
  */
 export function calculateUpgrade(request: UpgradeRequest): UpgradeResult {
   const { category, initialTier, finalTier } = request;
+
+  if (!CATEGORY_COEFFICIENTS[category]) {
+    return {
+      isValid: false,
+      error: 'INVALID_PARAMETERS',
+      message: `Unsupported category: ${category}`,
+    };
+  }
 
   if (!Number.isInteger(initialTier) || initialTier < 0 || !Number.isInteger(finalTier) || finalTier < 0) {
     return {

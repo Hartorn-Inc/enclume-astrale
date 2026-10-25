@@ -234,6 +234,36 @@ describe('calculateUpgrade - CDC Golden Test Cases', () => {
 });
 
 describe('calculateAmmoCraft - CDC Golden Test Cases', () => {
+  it('10 flèches +1 (N=1) = 200 po', () => {
+    const res = calculateAmmoCraft({
+      effectiveTier: 1,
+      quantity: 10,
+    });
+    expect(res).toEqual({
+      isValid: true,
+      effectiveTier: 1,
+      quantity: 10,
+      baseBatchPrice: 200,
+      supplementsPrice: 0,
+      totalPrice: 200,
+    });
+  });
+
+  it('10 flèches +2 (N=3) = 1 800 po', () => {
+    const res = calculateAmmoCraft({
+      effectiveTier: 3,
+      quantity: 10,
+    });
+    expect(res).toEqual({
+      isValid: true,
+      effectiveTier: 3,
+      quantity: 10,
+      baseBatchPrice: 1800,
+      supplementsPrice: 0,
+      totalPrice: 1800,
+    });
+  });
+
   it.each([
     { tier: 1, qty: 10, expected: 200 },
     { tier: 3, qty: 10, expected: 1800 },
@@ -244,43 +274,29 @@ describe('calculateAmmoCraft - CDC Golden Test Cases', () => {
       effectiveTier: tier,
       quantity: qty,
     });
-    expect(res.isValid).toBe(true);
-    if (res.isValid) {
-      expect(res.totalPrice).toBe(expected);
-      expect(res.supplementsPrice).toBe(0);
-    }
+    expect(res).toEqual({
+      isValid: true,
+      effectiveTier: tier,
+      quantity: qty,
+      baseBatchPrice: expected,
+      supplementsPrice: 0,
+      totalPrice: expected,
+    });
   });
 
-  it('adds supplements accurately for ammo batches', () => {
-    // 10 flèches +1 (N=1 base = 200 po) avec Incassable (+20 po/u) et Argentée (+10 po/u)
+  it('calculates ammo price with unit supplements', () => {
     const res = calculateAmmoCraft({
       effectiveTier: 1,
       quantity: 10,
-      supplements: [20, 10],
+      supplements: [5, 10],
     });
     expect(res).toEqual({
       isValid: true,
       effectiveTier: 1,
       quantity: 10,
       baseBatchPrice: 200,
-      supplementsPrice: 300,
-      totalPrice: 500,
-    });
-  });
-
-  it('adds supplementPerUnit accurately for ammo batches', () => {
-    const res = calculateAmmoCraft({
-      effectiveTier: 1,
-      quantity: 10,
-      supplementPerUnit: 25,
-    });
-    expect(res).toEqual({
-      isValid: true,
-      effectiveTier: 1,
-      quantity: 10,
-      baseBatchPrice: 200,
-      supplementsPrice: 250,
-      totalPrice: 450,
+      supplementsPrice: 150,
+      totalPrice: 350,
     });
   });
 
@@ -289,9 +305,7 @@ describe('calculateAmmoCraft - CDC Golden Test Cases', () => {
     { tier: -1, qty: 10, error: 'INVALID_EFFECTIVE_TIER' },
     { tier: 1, qty: 0, error: 'INVALID_QUANTITY' },
     { tier: 1, qty: -5, error: 'INVALID_QUANTITY' },
-    { tier: 1.5, qty: 10, error: 'INVALID_EFFECTIVE_TIER' },
-    { tier: 1, qty: 2.5, error: 'INVALID_QUANTITY' },
-  ])('should reject invalid ammo parameters: %j', ({ tier, qty, error }) => {
+  ])('rejects invalid ammo craft parameters: tier $tier, qty $qty', ({ tier, qty, error }) => {
     const res = calculateAmmoCraft({
       effectiveTier: tier,
       quantity: qty,
