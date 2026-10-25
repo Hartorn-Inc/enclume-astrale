@@ -63,10 +63,10 @@ export function computeEffectiveTier(bonus: number, slots: number): number {
 }
 
 export function calculatePriceCeiling(category: ItemCategory, effectiveTier: number): number {
-  const coefficient = CATEGORY_COEFFICIENTS[category];
-  if (coefficient === undefined) {
+  if (typeof CATEGORY_COEFFICIENTS[category] !== 'number') {
     throw new RangeError(`Catégorie d'objet inconnue: ${category}`);
   }
+  const coefficient = CATEGORY_COEFFICIENTS[category];
   if (!Number.isInteger(effectiveTier) || effectiveTier < 0) {
     throw new RangeError(
       `Le niveau effectif N doit être un entier positif ou nul, reçu: ${effectiveTier}`
@@ -100,7 +100,7 @@ export interface ForgeCraftFailure {
 export type ForgeCraftResult = ForgeCraftSuccess | ForgeCraftFailure;
 
 export function calculateForgeCraft(request: ForgeCraftRequest): ForgeCraftResult {
-  if (!CATEGORY_COEFFICIENTS[request.category]) {
+  if (typeof CATEGORY_COEFFICIENTS[request.category] !== 'number') {
     return {
       isValid: false,
       error: 'INVALID_CATEGORY',
@@ -310,10 +310,10 @@ export function calculateAmmoCraft(request: AmmoCraftRequest): AmmoCraftResult {
   let unitSupplement = 0;
   if (request.supplements && request.supplements.length > 0) {
     for (const sup of request.supplements) {
-      if (typeof sup === 'number') {
-        unitSupplement += sup > 0 ? sup : 0;
-      } else if (sup in AMMO_SUPPLEMENT_COSTS) {
-        unitSupplement += AMMO_SUPPLEMENT_COSTS[sup];
+      if (typeof sup === 'number' && Number.isFinite(sup) && sup > 0) {
+        unitSupplement += sup;
+      } else if (typeof sup === 'string' && typeof AMMO_SUPPLEMENT_COSTS[sup as AmmoSupplement] === 'number') {
+        unitSupplement += AMMO_SUPPLEMENT_COSTS[sup as AmmoSupplement];
       }
     }
   }

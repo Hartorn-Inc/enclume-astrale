@@ -9,6 +9,7 @@ import {
   resolveSlots,
   type ItemCategory,
   type EnchantmentSlot,
+  type AmmoSupplement,
 } from '../src/domain/forge';
 
 describe('Fonction computeBaseTier(B)', () => {
@@ -87,6 +88,15 @@ describe('Fonction calculatePriceCeiling(C, N)', () => {
     ['ARMOR_SHIELD' as ItemCategory, -2],
   ])('rejette les niveaux effectifs négatifs (%s, N = %i)', (category, tier) => {
     expect(() => calculatePriceCeiling(category, tier)).toThrow(RangeError);
+  });
+
+  it.each([
+    'toString' as ItemCategory,
+    'valueOf' as ItemCategory,
+    'constructor' as ItemCategory,
+    'UNKNOWN' as ItemCategory,
+  ])('rejette avec RangeError les catégories inconnues ou héritées du prototype (%s)', (category) => {
+    expect(() => calculatePriceCeiling(category, 1)).toThrow(RangeError);
   });
 });
 
@@ -225,6 +235,8 @@ describe('calculateForgeCraft — Règles WONDROUS_ITEM', () => {
 describe('calculateForgeCraft — Validation des entrées invalides', () => {
   it.each([
     ['UNKNOWN' as ItemCategory, 1, 0, 'INVALID_CATEGORY'],
+    ['toString' as ItemCategory, 1, 0, 'INVALID_CATEGORY'],
+    ['valueOf' as ItemCategory, 1, 0, 'INVALID_CATEGORY'],
     ['WEAPON' as ItemCategory, -1, 0, 'INVALID_BONUS'],
     ['WEAPON' as ItemCategory, 5, 0, 'INVALID_BONUS'],
     ['WEAPON' as ItemCategory, 2, -1, 'NEGATIVE_SLOTS'],
@@ -512,6 +524,36 @@ describe('calculateAmmoCraft — Cas d\'erreur et limites', () => {
     expect(result.isValid).toBe(false);
     if (!result.isValid) {
       expect(result.error).toBe(expectedError);
+    }
+  });
+});
+
+describe('calculateAmmoCraft — Robustesse prototype et valeurs non finies', () => {
+  it('ignore les propriétés héritées du prototype comme suppléments', () => {
+    const result = calculateAmmoCraft({
+      bonus: 1,
+      quantity: 10,
+      supplements: ['toString' as unknown as AmmoSupplement, 'valueOf' as unknown as AmmoSupplement],
+    });
+    expect(result.isValid).toBe(true);
+    if (result.isValid) {
+      expect(Number.isFinite(result.totalPrice)).toBe(true);
+      expect(result.supplementPrice).toBe(0);
+      expect(result.totalPrice).toBe(200);
+    }
+  });
+
+  it('ignore Infinity, -Infinity et NaN comme suppléments numériques', () => {
+    const result = calculateAmmoCraft({
+      bonus: 1,
+      quantity: 10,
+      supplements: [Infinity, -Infinity, NaN, -10],
+    });
+    expect(result.isValid).toBe(true);
+    if (result.isValid) {
+      expect(Number.isFinite(result.totalPrice)).toBe(true);
+      expect(result.supplementPrice).toBe(0);
+      expect(result.totalPrice).toBe(200);
     }
   });
 });
