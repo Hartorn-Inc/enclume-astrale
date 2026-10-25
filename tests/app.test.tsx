@@ -545,4 +545,29 @@ describe('Ticket #27 — Persistance dans localStorage (storage.ts)', () => {
     mockLocalStorage.setItem(STORAGE_KEY, '{ invalid json');
     expect(loadStoredState()).toEqual(DEFAULT_APP_STATE);
   });
+
+  it('retombe sur les tableaux par défaut si selectedEnchantmentIds ou supplements sont corrompus dans localStorage', () => {
+    mockLocalStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        forge: {
+          category: 'ARMOR_SHIELD',
+          bonus: 2,
+          selectedEnchantmentIds: 'corrupted_string',
+        },
+        ammoAndConsumables: {
+          supplements: { invalid: 'object' },
+        },
+      })
+    );
+
+    const loaded = loadStoredState();
+    expect(Array.isArray(loaded.forge.selectedEnchantmentIds)).toBe(true);
+    expect(loaded.forge.selectedEnchantmentIds).toEqual(DEFAULT_APP_STATE.forge.selectedEnchantmentIds);
+    expect(Array.isArray(loaded.ammoAndConsumables.supplements)).toBe(true);
+    expect(loaded.ammoAndConsumables.supplements).toEqual(DEFAULT_APP_STATE.ammoAndConsumables.supplements);
+
+    // Vérifier que l'application démarre et effectue le rendu sans TypeError
+    expect(() => renderToString(<App />)).not.toThrow();
+  });
 });

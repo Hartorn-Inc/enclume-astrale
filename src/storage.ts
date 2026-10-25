@@ -74,21 +74,47 @@ export function loadStoredState(): AppState {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_APP_STATE;
     const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') {
+      return DEFAULT_APP_STATE;
+    }
+
+    const forgeRaw = parsed.forge && typeof parsed.forge === 'object' ? parsed.forge : {};
+    const ammoRaw =
+      parsed.ammoAndConsumables && typeof parsed.ammoAndConsumables === 'object'
+        ? parsed.ammoAndConsumables
+        : {};
+
     return {
       ...DEFAULT_APP_STATE,
       ...parsed,
-      forge: { ...DEFAULT_APP_STATE.forge, ...(parsed.forge || {}) },
-      market: { ...DEFAULT_APP_STATE.market, ...(parsed.market || {}) },
+      forge: {
+        ...DEFAULT_APP_STATE.forge,
+        ...forgeRaw,
+        selectedEnchantmentIds: Array.isArray(forgeRaw.selectedEnchantmentIds)
+          ? forgeRaw.selectedEnchantmentIds
+          : DEFAULT_APP_STATE.forge.selectedEnchantmentIds,
+      },
+      market: {
+        ...DEFAULT_APP_STATE.market,
+        ...(parsed.market && typeof parsed.market === 'object' ? parsed.market : {}),
+      },
       ammoAndConsumables: {
         ...DEFAULT_APP_STATE.ammoAndConsumables,
-        ...(parsed.ammoAndConsumables || {}),
+        ...ammoRaw,
+        supplements: Array.isArray(ammoRaw.supplements)
+          ? ammoRaw.supplements
+          : DEFAULT_APP_STATE.ammoAndConsumables.supplements,
         potionQuantities: {
           ...DEFAULT_APP_STATE.ammoAndConsumables.potionQuantities,
-          ...(parsed.ammoAndConsumables?.potionQuantities || {}),
+          ...(ammoRaw.potionQuantities && typeof ammoRaw.potionQuantities === 'object'
+            ? ammoRaw.potionQuantities
+            : {}),
         },
         specialQuantities: {
           ...DEFAULT_APP_STATE.ammoAndConsumables.specialQuantities,
-          ...(parsed.ammoAndConsumables?.specialQuantities || {}),
+          ...(ammoRaw.specialQuantities && typeof ammoRaw.specialQuantities === 'object'
+            ? ammoRaw.specialQuantities
+            : {}),
         },
       },
     };
@@ -104,8 +130,7 @@ export function saveStoredState(state: AppState): boolean {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     return true;
-  }
- catch {
+  } catch {
     return false;
   }
 }
