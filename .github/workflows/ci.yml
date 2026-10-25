@@ -1,0 +1,77 @@
+# Managed by Giskard-AI/epure@7ad8d881cfcc78e14fcc24a781f5c87b1db178a4 # v1.1.0
+# Continuous Integration: Zizmor workflow security audit + Stack-aware Format, Lint/Typecheck, Tests, Build & E2E.
+name: "CI"
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main, 'feature/**']
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: "Quality (Format, Lint, Typecheck, Test & Build)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then npm ci; elif [ -f package.json ]; then npm install; else echo 'No package.json yet (bootstrap branch)'; fi
+      - name: Format check (if present)
+        run: |
+          if [ -f package.json ] && node -e 'const p=require("./package.json"); process.exit(p.scripts && (p.scripts["format:check"] || p.scripts.format) ? 0 : 1)'; then
+            npm run format:check --if-present || npm run format --if-present
+          fi
+      - name: Lint & Typecheck (strict)
+        run: |
+          if [ -f package.json ]; then
+            npm run lint --if-present
+            if node -e 'const p=require("./package.json"); process.exit(p.scripts && p.scripts.typecheck ? 0 : 1)'; then
+              npm run typecheck
+            elif [ -f tsconfig.json ]; then
+              npx tsc --noEmit
+            fi
+          fi
+      - name: Unit & Integration Tests
+        run: |
+          if [ -f package.json ] && node -e 'const p=require("./package.json"); process.exit(p.scripts && p.scripts.test ? 0 : 1)'; then
+            npx vitest run 2>/dev/null || npm test
+          fi
+      - name: Production Build
+        run: |
+          if [ -f package.json ]; then npm run build --if-present; fi
+      - name: End-to-End Tests (if configured)
+        run: |
+          if [ -f package.json ] && node -e 'const p=require("./package.json"); process.exit(p.scripts && (p.scripts["test:e2e"] || p.scripts.e2e) ? 0 : 1)'; then
+            npx playwright install --with-deps chromium
+            npm run test:e2e --if-present || npm run e2e --if-present
+          fi
+
+  zizmor:
+    name: "Zizmor"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: zizmorcore/zizmor-action@85b2b9fb8e3325e7a23d7d0a9d7ba5ae0f999e3e # v0.7.1
+        with:
+          persona: pedantic
+          advanced-security: false
