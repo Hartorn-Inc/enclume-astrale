@@ -1,0 +1,39 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    ":pinAllExceptPeerDependencies",
+    "docker:pinDigests"
+  ],
+  "baseBranchPatterns": [
+    "dev"
+  ],
+  "schedule": [
+    "before 6am on monday"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "semanticCommits": "enabled",
+  "prHourlyLimit": 2,
+  "prConcurrentLimit": 5,
+  "packageRules": [
+    {
+      "description": "Actions and container image cooldown (7 days)",
+      "matchManagers": [
+        "github-actions",
+        "dockerfile",
+        "docker-compose"
+      ],
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "description": "Group GitHub Actions digest & version updates",
+      "groupName": "github-actions",
+      "matchManagers": [
+        "github-actions"
+      ]
+    }
+  ]
+}
