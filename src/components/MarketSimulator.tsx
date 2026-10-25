@@ -27,8 +27,10 @@ export const MarketSimulator: React.FC<MarketSimulatorProps> = ({
 
   const handleRollRandom = () => {
     const newRoll = rollD20();
+    // Calcul synchrone pour garantir une annonce vocale aria-live rigoureusement synchronisée avec le jet
+    const newSimulation = simulateMarket(safeBasePrice, newRoll);
     onChange({ ...marketState, d20Roll: newRoll });
-    announce(`Jet de d20 effectué : ${newRoll}. Catégorie : ${simulation.categoryLabel}. Prix payé : ${simulation.finalPrice} pièces d'or.`);
+    announce(`Jet de d20 effectué : ${newRoll}. Catégorie : ${newSimulation.categoryLabel}. Prix payé : ${newSimulation.finalPrice} pièces d'or.`);
   };
 
   const handleManualRollChange = (e: React.ChangeEvent<HTMLInputElement>) => {

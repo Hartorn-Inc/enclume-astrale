@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderToString } from 'react-dom/server';
-import { App } from '../src/App';
+import { App, applyEnchantmentToggle } from '../src/App';
 import { ForgeCalculator } from '../src/components/ForgeCalculator';
 import { MarketSimulator } from '../src/components/MarketSimulator';
 import { AmmoAndConsumables } from '../src/components/AmmoAndConsumables';
@@ -15,6 +15,7 @@ import {
 import {
   type ItemCategory,
 } from '../src/domain/forge';
+import * as marketDomain from '../src/domain/market';
 import { simulateMarket } from '../src/domain/market';
 
 // Mock localStorage en environnement de test Node
@@ -49,6 +50,25 @@ if (typeof window !== 'undefined') {
 beforeEach(() => {
   mockLocalStorage.clear();
 });
+
+function findElement(
+  node: unknown,
+  predicate: (el: { props?: Record<string, unknown> }) => boolean
+): { props?: Record<string, unknown> } | null {
+  if (!node || typeof node !== 'object') return null;
+  const candidate = node as { props?: { children?: unknown; [key: string]: unknown } };
+  if (predicate(candidate)) return candidate;
+  const children = candidate.props?.children;
+  if (Array.isArray(children)) {
+    for (const child of children) {
+      const found = findElement(child, predicate);
+      if (found) return found;
+    }
+  } else if (children && typeof children === 'object') {
+    return findElement(children, predicate);
+  }
+  return null;
+}
 
 describe('Ticket #27 — Rendu global de l\'application L\'Enclume Astrale', () => {
   it('affiche le titre principal et les 4 onglets de navigation accessibles', () => {
@@ -149,6 +169,35 @@ describe('Ticket #27 — Calculateur de Forge (ForgeCalculator) & Golden Tests C
     expect(html).toContain('Le devis est bloqué');
   });
 
+  it('ignore les enchantements orphelins d\'autres catégories dans le calcul du devis (immunité contre slots fantômes)', () => {
+    // sournoise coûte 1 slot mais n'est compatible qu'avec WEAPON
+    const forgeState: AppState['forge'] = {
+      category: 'ARMOR_SHIELD',
+      bonus: 1,
+      selectedEnchantmentIds: ['sournoise'],
+      isUpgradeMode: false,
+      upgradeInitialBonus: 1,
+      upgradeInitialSlots: 0,
+      upgradeTargetBonus: 2,
+      upgradeTargetSlots: 0,
+    };
+
+    const html = renderToString(
+      <ForgeCalculator
+        forgeState={forgeState}
+        onChange={() => {}}
+        onTransferToMarket={() => {}}
+        announce={() => {}}
+      />
+    );
+
+    // Sournoise étant incompatible avec ARMOR_SHIELD, elle ne doit pas être comptabilisée
+    // Le prix calculé pour ARMOR_SHIELD B=1 S=0 est 850 po (et non 3 400 po avec le slot fantôme)
+    expect(html).toContain('850 po');
+    expect(html).not.toContain('3 400 po');
+    expect(html).not.toContain('Erreur de conformité de forge');
+  });
+
   it('calcule correctement l\'amélioration d\'équipement (Armure +2 nue vers +3 nue = 22 950 po)', () => {
     const forgeState: AppState['forge'] = {
       category: 'ARMOR_SHIELD',
@@ -234,6 +283,38 @@ describe('Ticket #27 — Simulateur de Marché d20 (MarketSimulator)', () => {
       const result = simulateMarket(basePrice, roll);
       expect(result.finalPrice).toBeLessThanOrEqual(basePrice);
     }
+  });
+
+  it('synchronise immédiatement l\'annonce vocale avec le nouveau jet aléatoire lors de handleRollRandom', () => {
+    const onChangeMock = vi.fn();
+    const announceMock = vi.fn();
+    const rollSpy = vi.spyOn(marketDomain, 'rollD20').mockReturnValue(1);
+
+    // Simulation initialement à roll 15 (10 000 po, Nominal)
+    const element = MarketSimulator({
+      marketState: { basePrice: 10000, d20Roll: 15 },
+      onChange: onChangeMock,
+      announce: announceMock,
+    });
+
+    const rollButton = findElement(element, (el) => el.props?.['aria-label'] === 'Lancer un d20 aléatoire');
+    expect(rollButton).not.toBeNull();
+    const onClick = rollButton?.props?.onClick as (() => void) | undefined;
+    expect(onClick).toBeDefined();
+    onClick?.();
+
+    // L'annonce doit refléter le NOUVEAU tirage d20=1 (7 200 po, Opportunité exceptionnelle),
+    // et non pas l'ancien roll 15 (10 000 po, Nominal)
+    expect(rollSpy).toHaveBeenCalled();
+    expect(announceMock).toHaveBeenCalledWith(
+      "Jet de d20 effectué : 1. Catégorie : Opportunité exceptionnelle. Prix payé : 7200 pièces d'or."
+    );
+    expect(onChangeMock).toHaveBeenCalledWith({
+      basePrice: 10000,
+      d20Roll: 1,
+    });
+
+    rollSpy.mockRestore();
   });
 });
 
@@ -326,6 +407,106 @@ describe('Ticket #27 — Grimoire des Enchantements (GrimoireCatalog)', () => {
     expect(html).toContain('Vorpaline');
     expect(html).toContain('1 slot');
     expect(html).toContain('3 slots');
+  });
+});
+
+describe('Gestion de l\'équipement et intégrité de domaine (applyEnchantmentToggle)', () => {
+  it('préserve la catégorie active si l\'enchantement multi-catégorie la supporte', () => {
+    const currentForge: AppState['forge'] = {
+      category: 'ARMOR_SHIELD',
+      bonus: 2,
+      selectedEnchantmentIds: [],
+      isUpgradeMode: false,
+      upgradeInitialBonus: 1,
+      upgradeInitialSlots: 0,
+      upgradeTargetBonus: 2,
+      upgradeTargetSlots: 0,
+    };
+
+    // 'sanctifiee' est compatible WEAPON et ARMOR_SHIELD
+    const next = applyEnchantmentToggle(currentForge, 'sanctifiee');
+    expect(next.category).toBe('ARMOR_SHIELD');
+    expect(next.bonus).toBe(2);
+    expect(next.selectedEnchantmentIds).toEqual(['sanctifiee']);
+  });
+
+  it('ne modifie ni la catégorie ni le bonus lors du déséquipement', () => {
+    const currentForge: AppState['forge'] = {
+      category: 'ARMOR_SHIELD',
+      bonus: 2,
+      selectedEnchantmentIds: ['sanctifiee'],
+      isUpgradeMode: false,
+      upgradeInitialBonus: 1,
+      upgradeInitialSlots: 0,
+      upgradeTargetBonus: 2,
+      upgradeTargetSlots: 0,
+    };
+
+    const next = applyEnchantmentToggle(currentForge, 'sanctifiee');
+    expect(next.category).toBe('ARMOR_SHIELD');
+    expect(next.bonus).toBe(2);
+    expect(next.selectedEnchantmentIds).toEqual([]);
+  });
+
+  it('purge les enchantements incompatibles lors d\'un basculement nécessaire de catégorie', () => {
+    const currentForge: AppState['forge'] = {
+      category: 'ARMOR_SHIELD',
+      bonus: 2,
+      // gardienne = ARMOR_SHIELD seul, sanctifiee = WEAPON + ARMOR_SHIELD
+      selectedEnchantmentIds: ['gardienne', 'sanctifiee'],
+      isUpgradeMode: false,
+      upgradeInitialBonus: 1,
+      upgradeInitialSlots: 0,
+      upgradeTargetBonus: 2,
+      upgradeTargetSlots: 0,
+    };
+
+    // vorpaline = WEAPON seul => force le basculement vers WEAPON
+    const next = applyEnchantmentToggle(currentForge, 'vorpaline');
+    expect(next.category).toBe('WEAPON');
+    expect(next.bonus).toBe(2);
+    // gardienne doit être purgée car invalide sur arme, sanctifiee conservée
+    expect(next.selectedEnchantmentIds).toEqual(['sanctifiee', 'vorpaline']);
+  });
+
+  it('ajuste le bonus nu B à 1 lors de la sortie d\'une configuration WONDROUS_ITEM (B=0)', () => {
+    const wondrousForge: AppState['forge'] = {
+      category: 'WONDROUS_ITEM',
+      bonus: 0,
+      selectedEnchantmentIds: [],
+      isUpgradeMode: false,
+      upgradeInitialBonus: 0,
+      upgradeInitialSlots: 0,
+      upgradeTargetBonus: 0,
+      upgradeTargetSlots: 1,
+    };
+
+    // sournoise n'est compatible qu'avec WEAPON => force le basculement vers WEAPON
+    const next = applyEnchantmentToggle(wondrousForge, 'sournoise');
+    expect(next.category).toBe('WEAPON');
+    // Le bonus doit être ajusté à au moins 1 pour éviter INVALID_BONUS
+    expect(next.bonus).toBe(1);
+    expect(next.selectedEnchantmentIds).toEqual(['sournoise']);
+  });
+
+  it('force le bonus nu B à 0 lors d\'un basculement vers WONDROUS_ITEM', () => {
+    const weaponForge: AppState['forge'] = {
+      category: 'WEAPON',
+      bonus: 3,
+      selectedEnchantmentIds: ['sournoise'],
+      isUpgradeMode: false,
+      upgradeInitialBonus: 1,
+      upgradeInitialSlots: 0,
+      upgradeTargetBonus: 2,
+      upgradeTargetSlots: 0,
+    };
+
+    // Basculement forcé vers WONDROUS_ITEM via fallback
+    const next = applyEnchantmentToggle(weaponForge, 'custom_wondrous', 'WONDROUS_ITEM');
+    expect(next.category).toBe('WONDROUS_ITEM');
+    expect(next.bonus).toBe(0);
+    // sournoise doit être purgé
+    expect(next.selectedEnchantmentIds).toEqual(['custom_wondrous']);
   });
 });
 

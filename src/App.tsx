@@ -9,6 +9,68 @@ import { ForgeCalculator } from './components/ForgeCalculator';
 import { MarketSimulator } from './components/MarketSimulator';
 import { AmmoAndConsumables } from './components/AmmoAndConsumables';
 import { GrimoireCatalog } from './components/GrimoireCatalog';
+import { findEnchantmentById } from './domain/catalog';
+import type { ItemCategory } from './domain/forge';
+
+/**
+ * Applique l'équipement ou le déséquipement d'un enchantement dans la forge
+ * en préservant la catégorie active si compatible, en nettoyant les slots fantômes
+ * et en réajustant le bonus nu B en cas de transition de catégorie.
+ */
+export function applyEnchantmentToggle(
+  currentForge: AppState['forge'],
+  enchId: string,
+  fallbackCategory?: ItemCategory
+): AppState['forge'] {
+  const currentIds = currentForge.selectedEnchantmentIds;
+  const isEquipped = currentIds.includes(enchId);
+
+  // 1) Déséquipement : retirer enchId sans modifier la catégorie ni le bonus nu
+  if (isEquipped) {
+    return {
+      ...currentForge,
+      selectedEnchantmentIds: currentIds.filter((x) => x !== enchId),
+    };
+  }
+
+  // 2) Équipement : préserver la catégorie courante si elle est supportée par l'enchantement
+  const ench = findEnchantmentById(enchId);
+  const currentCategory = currentForge.category;
+  const isCurrentCategorySupported = ench ? ench.categories.includes(currentCategory) : false;
+
+  const targetCategory: ItemCategory = isCurrentCategorySupported
+    ? currentCategory
+    : (ench ? ench.categories[0] : (fallbackCategory ?? currentCategory));
+
+  const categoryChanged = targetCategory !== currentCategory;
+
+  // 3) En cas de changement de catégorie, purger les IDs d'enchantements incompatibles avec la cible
+  const baseIds = categoryChanged
+    ? currentIds.filter((id) => {
+        const def = findEnchantmentById(id);
+        return def ? def.categories.includes(targetCategory) : false;
+      })
+    : currentIds;
+
+  const nextIds = [...baseIds, enchId];
+
+  // 4) Ajustement du bonus nu B pour respecter les invariants de domaine
+  let nextBonus = currentForge.bonus;
+  if (categoryChanged) {
+    if (targetCategory === 'WONDROUS_ITEM') {
+      nextBonus = 0;
+    } else if (currentForge.bonus === 0) {
+      nextBonus = 1;
+    }
+  }
+
+  return {
+    ...currentForge,
+    category: targetCategory,
+    bonus: nextBonus,
+    selectedEnchantmentIds: nextIds,
+  };
+}
 
 export const App: React.FC = () => {
   const [state, setState] = useState<AppState>(() => loadStoredState());
@@ -206,17 +268,10 @@ export const App: React.FC = () => {
             <GrimoireCatalog
               selectedIds={state.forge.selectedEnchantmentIds}
               onSelectEnchantment={(enchId, cat) => {
-                const currentIds = state.forge.selectedEnchantmentIds;
-                const nextIds = currentIds.includes(enchId)
-                  ? currentIds.filter((x) => x !== enchId)
-                  : [...currentIds, enchId];
+                const nextForge = applyEnchantmentToggle(state.forge, enchId, cat);
                 setState({
                   ...state,
-                  forge: {
-                    ...state.forge,
-                    category: cat,
-                    selectedEnchantmentIds: nextIds,
-                  },
+                  forge: nextForge,
                 });
                 announce(`Enchantement ${enchId} mis à jour dans la forge.`);
               }}
