@@ -1,0 +1,23 @@
+# Managed by Giskard-AI/epure@9712a9b3ec35872800859c2f9d7b823b0fa711c6 # v1.1.0
+name: "Conventional Commit PR Title"
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches: [dev, main, 'feature/**']
+permissions:
+  contents: read
+jobs:
+  pr-title:
+    name: "PR title"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate Conventional Commit PR title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          PATTERN='^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\([a-z0-9/-]+\))?(!)?: .+'
+          if [[ ! "$PR_TITLE" =~ $PATTERN ]]; then
+            echo "::error::PR title must follow Conventional Commits: $PATTERN (got: $PR_TITLE)"
+            exit 1
+          fi
