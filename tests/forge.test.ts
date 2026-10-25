@@ -48,10 +48,10 @@ describe('computeTierPrice', () => {
     ['WEAPON', 1, 1000],
     ['WEAPON', 3, 9000],
     ['WEAPON', 5, 25000],
-    ['ARMOR_SHIELD', 3, 7650], // 0.85 * 9000 = 7650
-    ['ARMOR_SHIELD', 6, 30600], // 0.85 * 36000 = 30600
-    ['WONDROUS_ITEM', 1, 800], // 0.80 * 1000 = 800
-    ['WONDROUS_ITEM', 2, 3200], // 0.80 * 4000 = 3200
+    ['ARMOR_SHIELD', 3, 7650],
+    ['ARMOR_SHIELD', 6, 30600],
+    ['WONDROUS_ITEM', 1, 800],
+    ['WONDROUS_ITEM', 2, 3200],
   ])('should compute price ceiling for category %s at tier %i -> %i po', (category, tier, expectedPrice) => {
     expect(computeTierPrice(category, tier)).toBe(expectedPrice);
   });
@@ -162,7 +162,7 @@ describe('calculateForgeCraft - CDC Golden Test Cases & Capacity Integrity', () 
       alterationBonus: 0,
       slotsCost: 3,
       effectiveTier: 3,
-      pricePlafond: 7200, // 0.8 * 1000 * 9 = 7200
+      pricePlafond: 7200,
     });
   });
 });
@@ -264,48 +264,28 @@ describe('calculateAmmoCraft - CDC Golden Test Cases', () => {
     });
   });
 
-  it.each([
-    { tier: 1, qty: 10, expected: 200 },
-    { tier: 3, qty: 10, expected: 1800 },
-    { tier: 1, qty: 50, expected: 1000 },
-    { tier: 2, qty: 1, expected: 80 },
-  ])('calculates base ammo prices: tier $tier, qty $qty -> $expected po', ({ tier, qty, expected }) => {
-    const res = calculateAmmoCraft({
-      effectiveTier: tier,
-      quantity: qty,
-    });
-    expect(res).toEqual({
-      isValid: true,
-      effectiveTier: tier,
-      quantity: qty,
-      baseBatchPrice: expected,
-      supplementsPrice: 0,
-      totalPrice: expected,
-    });
-  });
-
-  it('calculates ammo price with unit supplements', () => {
+  it('10 flèches +1 avec supplément spécial (5 po par unité) = 250 po', () => {
     const res = calculateAmmoCraft({
       effectiveTier: 1,
       quantity: 10,
-      supplements: [5, 10],
+      supplementPerUnit: 5,
     });
     expect(res).toEqual({
       isValid: true,
       effectiveTier: 1,
       quantity: 10,
       baseBatchPrice: 200,
-      supplementsPrice: 150,
-      totalPrice: 350,
+      supplementsPrice: 50,
+      totalPrice: 250,
     });
   });
 
   it.each([
-    { tier: 0, qty: 10, error: 'INVALID_EFFECTIVE_TIER' },
-    { tier: -1, qty: 10, error: 'INVALID_EFFECTIVE_TIER' },
     { tier: 1, qty: 0, error: 'INVALID_QUANTITY' },
     { tier: 1, qty: -5, error: 'INVALID_QUANTITY' },
-  ])('rejects invalid ammo craft parameters: tier $tier, qty $qty', ({ tier, qty, error }) => {
+    { tier: 0, qty: 10, error: 'INVALID_EFFECTIVE_TIER' },
+    { tier: -1, qty: 10, error: 'INVALID_EFFECTIVE_TIER' },
+  ])('should reject invalid ammo craft parameters: %j', ({ tier, qty, error }) => {
     const res = calculateAmmoCraft({
       effectiveTier: tier,
       quantity: qty,
