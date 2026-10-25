@@ -1,8 +1,14 @@
-/**
- * L'Enclume Astrale — Domaine de forge arcanique et d'économie magique
- */
-
 export type ItemCategory = 'WEAPON' | 'ARMOR_SHIELD' | 'WONDROUS_ITEM';
+
+export type EnchantmentSlot = number;
+
+export type AmmoSupplement = 'INCASSABLE' | 'PERCUTANTE' | 'ARGENTEE';
+
+export const AMMO_SUPPLEMENT_COSTS: Record<AmmoSupplement, number> = {
+  INCASSABLE: 20,
+  PERCUTANTE: 20,
+  ARGENTEE: 10,
+};
 
 export const CATEGORY_COEFFICIENTS: Record<ItemCategory, number> = {
   WEAPON: 1.0,
@@ -10,319 +16,208 @@ export const CATEGORY_COEFFICIENTS: Record<ItemCategory, number> = {
   WONDROUS_ITEM: 0.8,
 };
 
-export const AMMO_SUPPLEMENTS = {
-  UNBREAKABLE: 20,
-  PIERCING: 20,
-  SILVERED: 10,
-} as const;
-
-export type AmmoSupplementType = keyof typeof AMMO_SUPPLEMENTS;
-
-export interface EnchantmentSlot {
-  id?: string;
-  name?: string;
-  slots: number;
-}
+export type ForgeErrorCode =
+  | 'CAPACITY_EXCEEDED'
+  | 'WONDROUS_ITEM_CANNOT_HAVE_BONUS'
+  | 'INVALID_BONUS'
+  | 'INVALID_SLOTS';
 
 export interface ForgeCraftRequest {
   category: ItemCategory;
-  bonus: number;
-  slots?: number;
-  enchantments?: EnchantmentSlot[];
+  enhancementBonus: number;
+  slots: EnchantmentSlot;
 }
 
-export type ForgeCraftErrorCode =
-  | 'CAPACITY_EXCEEDED'
-  | 'INVALID_BONUS'
-  | 'WONDROUS_CANNOT_HAVE_BONUS'
-  | 'INVALID_UPGRADE_TIER'
-  | 'INVALID_QUANTITY';
-
-export interface ForgeCraftSuccess {
-  isValid: true;
-  category: ItemCategory;
-  bonus: number;
-  totalSlots: number;
-  effectiveTier: number;
-  baseCost: number;
-  ceilingPrice: number;
+export interface ForgeCraftResult {
+  isValid: boolean;
+  error?: ForgeErrorCode;
+  baseTier?: number;
+  effectiveTier?: number;
+  ceilingPrice?: number;
 }
 
-export interface ForgeCraftFailure {
-  isValid: false;
-  error: ForgeCraftErrorCode;
-  message?: string;
-}
-
-export type ForgeCraftResult = ForgeCraftSuccess | ForgeCraftFailure;
+export type UpgradeErrorCode =
+  | 'INVALID_INITIAL_ITEM'
+  | 'INVALID_FINAL_ITEM'
+  | 'FINAL_TIER_NOT_GREATER'
+  | 'CAPACITY_EXCEEDED';
 
 export interface UpgradeRequest {
   category: ItemCategory;
-  initialBonus?: number;
-  initialSlots?: number;
-  initialTier?: number;
-  finalBonus?: number;
-  finalSlots?: number;
-  finalTier?: number;
+  initialEnhancementBonus: number;
+  initialSlots: EnchantmentSlot;
+  finalEnhancementBonus: number;
+  finalSlots: EnchantmentSlot;
 }
 
-export interface UpgradeSuccess {
-  isValid: true;
-  category: ItemCategory;
-  initialEffectiveTier: number;
-  finalEffectiveTier: number;
-  initialCeilingPrice: number;
-  finalCeilingPrice: number;
-  upgradeCost: number;
+export interface UpgradeResult {
+  isValid: boolean;
+  error?: UpgradeErrorCode;
+  initialCeilingPrice?: number;
+  finalCeilingPrice?: number;
+  upgradePrice?: number;
 }
 
-export interface UpgradeFailure {
-  isValid: false;
-  error: ForgeCraftErrorCode;
-  message?: string;
-}
-
-export type UpgradeResult = UpgradeSuccess | UpgradeFailure;
-
-export interface AmmoSupplementItem {
-  name?: string;
-  costPerUnit: number;
-}
-
-export type AmmoSupplementInput =
-  | AmmoSupplementType
-  | number
-  | AmmoSupplementItem;
+export type AmmoErrorCode =
+  | 'CAPACITY_EXCEEDED'
+  | 'INVALID_QUANTITY'
+  | 'INVALID_BONUS'
+  | 'INVALID_SLOTS';
 
 export interface AmmoCraftRequest {
-  bonus: number;
-  slots?: number;
+  enhancementBonus: number;
+  slots?: EnchantmentSlot;
   quantity: number;
-  supplements?: AmmoSupplementInput[];
+  supplements?: AmmoSupplement[];
 }
 
-export interface AmmoCraftSuccess {
-  isValid: true;
-  bonus: number;
-  slots: number;
-  effectiveTier: number;
-  quantity: number;
-  unitBasePrice: number;
-  supplementsCostTotal: number;
-  totalCeilingPrice: number;
+export interface AmmoCraftResult {
+  isValid: boolean;
+  error?: AmmoErrorCode;
+  effectiveTier?: number;
+  ceilingPrice?: number;
 }
 
-export interface AmmoCraftFailure {
-  isValid: false;
-  error: ForgeCraftErrorCode;
-  message?: string;
-}
-
-export type AmmoCraftResult = AmmoCraftSuccess | AmmoCraftFailure;
-
-/**
- * Calcule le niveau économique de base T(B) = B * (B + 1) / 2
- * B doit appartenir à {0, 1, 2, 3, 4}
- */
 export function computeBaseTier(bonus: number): number {
-  if (!Number.isInteger(bonus) || bonus < 0 || bonus > 4) {
-    throw new Error(`Invalid bonus: ${bonus}. Must be an integer between 0 and 4.`);
+  if (!Number.isInteger(bonus) || bonus < 0) {
+    throw new Error(`Bonus must be a non-negative integer, got: ${bonus}`);
   }
   return (bonus * (bonus + 1)) / 2;
 }
 
-/**
- * Calcule le niveau économique effectif N = T(B) + S
- */
-export function computeEffectiveTier(bonus: number, slots: number): number {
+export function computeEffectiveTier(bonus: number, slots: EnchantmentSlot): number {
   if (!Number.isInteger(slots) || slots < 0) {
-    throw new Error(`Invalid slots: ${slots}. Must be a non-negative integer.`);
+    throw new Error(`Slots must be a non-negative integer, got: ${slots}`);
   }
   return computeBaseTier(bonus) + slots;
 }
 
-/**
- * Calcule le prix plafond garanti en po : P_plafond = Math.round(C * 1000 * N^2)
- */
-export function computeCeilingPrice(category: ItemCategory, effectiveTier: number): number {
-  const coef = CATEGORY_COEFFICIENTS[category];
-  if (coef === undefined) {
-    throw new Error(`Unknown category: ${category}`);
-  }
-  if (!Number.isInteger(effectiveTier) || effectiveTier < 0) {
-    throw new Error(`Invalid effective tier: ${effectiveTier}`);
-  }
-  return Math.round(coef * 1000 * effectiveTier ** 2);
-}
+export function computeForgeQuote(request: ForgeCraftRequest): ForgeCraftResult {
+  const { category, enhancementBonus, slots } = request;
 
-/**
- * Effectue le calcul complet de forge d'un objet en appliquant les règles de capacité
- */
-export function computeForgeCraft(request: ForgeCraftRequest): ForgeCraftResult {
-  const { category, bonus } = request;
-
-  if (!Number.isInteger(bonus) || bonus < 0 || bonus > 4) {
+  if (!Number.isInteger(enhancementBonus) || enhancementBonus < 0) {
     return { isValid: false, error: 'INVALID_BONUS' };
   }
 
-  const totalSlots =
-    request.slots !== undefined
-      ? request.slots
-      : (request.enchantments ?? []).reduce((acc, curr) => acc + curr.slots, 0);
-
-  if (!Number.isInteger(totalSlots) || totalSlots < 0) {
-    return { isValid: false, error: 'CAPACITY_EXCEEDED' };
+  if (!Number.isInteger(slots) || slots < 0) {
+    return { isValid: false, error: 'INVALID_SLOTS' };
   }
 
   if (category === 'WONDROUS_ITEM') {
-    if (bonus !== 0) {
-      return { isValid: false, error: 'WONDROUS_CANNOT_HAVE_BONUS' };
+    if (enhancementBonus !== 0) {
+      return { isValid: false, error: 'WONDROUS_ITEM_CANNOT_HAVE_BONUS' };
     }
-    const effectiveTier = totalSlots;
-    const ceilingPrice = computeCeilingPrice('WONDROUS_ITEM', effectiveTier);
+    const effectiveTier = slots;
+    const coefficient = CATEGORY_COEFFICIENTS[category];
+    const ceilingPrice = Math.round(coefficient * 1000 * effectiveTier * effectiveTier);
     return {
       isValid: true,
-      category,
-      bonus,
-      totalSlots,
+      baseTier: 0,
       effectiveTier,
-      baseCost: ceilingPrice,
       ceilingPrice,
     };
   }
 
-  // Règle d'intégrité de capacité pour WEAPON et ARMOR_SHIELD : S <= B
-  if (totalSlots > bonus) {
+  if (slots > enhancementBonus) {
     return { isValid: false, error: 'CAPACITY_EXCEEDED' };
   }
 
-  const effectiveTier = computeEffectiveTier(bonus, totalSlots);
-  const ceilingPrice = computeCeilingPrice(category, effectiveTier);
+  const baseTier = computeBaseTier(enhancementBonus);
+  const effectiveTier = baseTier + slots;
+  const coefficient = CATEGORY_COEFFICIENTS[category];
+  const ceilingPrice = Math.round(coefficient * 1000 * effectiveTier * effectiveTier);
 
   return {
     isValid: true,
-    category,
-    bonus,
-    totalSlots,
+    baseTier,
     effectiveTier,
-    baseCost: ceilingPrice,
     ceilingPrice,
   };
 }
 
-/**
- * Calcule le coût d'amélioration d'un objet existant
- * P_amélioration = P_plafond(N_final) - P_plafond(N_init) avec N_final > N_init
- */
-export function computeUpgradeCraft(request: UpgradeRequest): UpgradeResult {
-  const { category } = request;
+export const computeForgeCraft = computeForgeQuote;
 
-  let initialTier: number;
-  let finalTier: number;
+export function computeUpgrade(request: UpgradeRequest): UpgradeResult {
+  const initialQuote = computeForgeQuote({
+    category: request.category,
+    enhancementBonus: request.initialEnhancementBonus,
+    slots: request.initialSlots,
+  });
 
-  if (request.initialTier !== undefined) {
-    initialTier = request.initialTier;
-  } else {
-    const b = request.initialBonus ?? 0;
-    const s = request.initialSlots ?? 0;
-    if (category === 'WONDROUS_ITEM' && b !== 0) {
-      return { isValid: false, error: 'WONDROUS_CANNOT_HAVE_BONUS' };
-    }
-    if ((category === 'WEAPON' || category === 'ARMOR_SHIELD') && s > b) {
-      return { isValid: false, error: 'CAPACITY_EXCEEDED' };
-    }
-    if (!Number.isInteger(b) || b < 0 || b > 4) {
-      return { isValid: false, error: 'INVALID_BONUS' };
-    }
-    initialTier = category === 'WONDROUS_ITEM' ? s : computeEffectiveTier(b, s);
+  if (!initialQuote.isValid) {
+    return {
+      isValid: false,
+      error: initialQuote.error === 'CAPACITY_EXCEEDED' ? 'CAPACITY_EXCEEDED' : 'INVALID_INITIAL_ITEM',
+    };
   }
 
-  if (request.finalTier !== undefined) {
-    finalTier = request.finalTier;
-  } else {
-    const b = request.finalBonus ?? 0;
-    const s = request.finalSlots ?? 0;
-    if (category === 'WONDROUS_ITEM' && b !== 0) {
-      return { isValid: false, error: 'WONDROUS_CANNOT_HAVE_BONUS' };
-    }
-    if ((category === 'WEAPON' || category === 'ARMOR_SHIELD') && s > b) {
-      return { isValid: false, error: 'CAPACITY_EXCEEDED' };
-    }
-    if (!Number.isInteger(b) || b < 0 || b > 4) {
-      return { isValid: false, error: 'INVALID_BONUS' };
-    }
-    finalTier = category === 'WONDROUS_ITEM' ? s : computeEffectiveTier(b, s);
+  const finalQuote = computeForgeQuote({
+    category: request.category,
+    enhancementBonus: request.finalEnhancementBonus,
+    slots: request.finalSlots,
+  });
+
+  if (!finalQuote.isValid) {
+    return {
+      isValid: false,
+      error: finalQuote.error === 'CAPACITY_EXCEEDED' ? 'CAPACITY_EXCEEDED' : 'INVALID_FINAL_ITEM',
+    };
   }
 
-  if (!Number.isInteger(initialTier) || !Number.isInteger(finalTier) || finalTier <= initialTier) {
-    return { isValid: false, error: 'INVALID_UPGRADE_TIER' };
+  if (finalQuote.effectiveTier! <= initialQuote.effectiveTier!) {
+    return { isValid: false, error: 'FINAL_TIER_NOT_GREATER' };
   }
 
-  const initialCeilingPrice = computeCeilingPrice(category, initialTier);
-  const finalCeilingPrice = computeCeilingPrice(category, finalTier);
-  const upgradeCost = finalCeilingPrice - initialCeilingPrice;
+  const initialCeilingPrice = initialQuote.ceilingPrice!;
+  const finalCeilingPrice = finalQuote.ceilingPrice!;
+  const upgradePrice = finalCeilingPrice - initialCeilingPrice;
 
   return {
     isValid: true,
-    category,
-    initialEffectiveTier: initialTier,
-    finalEffectiveTier: finalTier,
     initialCeilingPrice,
     finalCeilingPrice,
-    upgradeCost,
+    upgradePrice,
   };
 }
 
-/**
- * Calcule le devis pour un lot de munitions magiques
- * P = Math.round((1000 * N^2 / 50) * Q) + sum(supplements * Q)
- */
-export function computeAmmoCraft(request: AmmoCraftRequest): AmmoCraftResult {
-  const { bonus, quantity } = request;
+export const computeUpgradeQuote = computeUpgrade;
+
+export function computeAmmoQuote(request: AmmoCraftRequest): AmmoCraftResult {
   const slots = request.slots ?? 0;
+  const { enhancementBonus, quantity, supplements = [] } = request;
+
+  if (!Number.isInteger(enhancementBonus) || enhancementBonus < 0) {
+    return { isValid: false, error: 'INVALID_BONUS' };
+  }
+
+  if (!Number.isInteger(slots) || slots < 0) {
+    return { isValid: false, error: 'INVALID_SLOTS' };
+  }
 
   if (!Number.isInteger(quantity) || quantity <= 0) {
     return { isValid: false, error: 'INVALID_QUANTITY' };
   }
 
-  if (!Number.isInteger(bonus) || bonus < 0 || bonus > 4) {
-    return { isValid: false, error: 'INVALID_BONUS' };
-  }
-
-  if (slots > bonus || slots < 0) {
+  if (slots > enhancementBonus) {
     return { isValid: false, error: 'CAPACITY_EXCEEDED' };
   }
 
-  const effectiveTier = computeEffectiveTier(bonus, slots);
-  const unitBasePrice = Math.round((1000 * effectiveTier ** 2) / 50);
-  const baseBatchPrice = unitBasePrice * quantity;
+  const effectiveTier = computeEffectiveTier(enhancementBonus, slots);
+  const weaponBasePrice = 1000 * effectiveTier * effectiveTier;
+  const baseAmmoPrice = Math.round((weaponBasePrice / 50) * quantity);
 
-  let suppUnitCost = 0;
-  if (request.supplements && request.supplements.length > 0) {
-    for (const supp of request.supplements) {
-      if (typeof supp === 'string') {
-        if (supp in AMMO_SUPPLEMENTS) {
-          suppUnitCost += AMMO_SUPPLEMENTS[supp as AmmoSupplementType];
-        }
-      } else if (typeof supp === 'number') {
-        suppUnitCost += supp;
-      } else if (typeof supp === 'object' && supp !== null && 'costPerUnit' in supp) {
-        suppUnitCost += supp.costPerUnit;
-      }
-    }
-  }
-
-  const supplementsCostTotal = suppUnitCost * quantity;
-  const totalCeilingPrice = baseBatchPrice + supplementsCostTotal;
+  const supplementUnitCost = supplements.reduce(
+    (sum, supp) => sum + (AMMO_SUPPLEMENT_COSTS[supp] ?? 0),
+    0,
+  );
+  const totalSupplementCost = supplementUnitCost * quantity;
+  const ceilingPrice = baseAmmoPrice + totalSupplementCost;
 
   return {
     isValid: true,
-    bonus,
-    slots,
     effectiveTier,
-    quantity,
-    unitBasePrice,
-    supplementsCostTotal,
-    totalCeilingPrice,
+    ceilingPrice,
   };
 }
+
+export const computeAmmoCraft = computeAmmoQuote;

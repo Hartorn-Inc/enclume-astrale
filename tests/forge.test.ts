@@ -2,320 +2,333 @@ import { describe, it, expect } from 'vitest';
 import {
   computeBaseTier,
   computeEffectiveTier,
-  computeCeilingPrice,
-  computeForgeCraft,
-  computeUpgradeCraft,
-  computeAmmoCraft,
+  computeForgeQuote,
+  computeUpgrade,
+  computeAmmoQuote,
   ItemCategory,
+  AmmoSupplement,
 } from '../src/domain/forge';
 
-describe('computeBaseTier — T(B) = B * (B + 1) / 2', () => {
+describe('computeBaseTier', () => {
   it.each([
-    [0, 0],
-    [1, 1],
-    [2, 3],
-    [3, 6],
-    [4, 10],
-  ])('should return T(%i) = %i', (bonus, expectedTier) => {
-    expect(computeBaseTier(bonus)).toBe(expectedTier);
+    { bonus: 0, expected: 0 },
+    { bonus: 1, expected: 1 },
+    { bonus: 2, expected: 3 },
+    { bonus: 3, expected: 6 },
+    { bonus: 4, expected: 10 },
+  ])('should calculate T($bonus) = $expected', ({ bonus, expected }) => {
+    expect(computeBaseTier(bonus)).toBe(expected);
   });
 
-  it.each([-1, 5, 2.5, NaN, Infinity])(
-    'should throw an error for invalid bonus: %s',
-    (invalidBonus) => {
-      expect(() => computeBaseTier(invalidBonus)).toThrow();
-    }
-  );
+  it.each([-1, -5, 1.5, NaN])('should throw on invalid bonus: %s', (invalidBonus) => {
+    expect(() => computeBaseTier(invalidBonus)).toThrow();
+  });
 });
 
-describe('computeEffectiveTier — N = T(B) + S', () => {
+describe('computeEffectiveTier', () => {
   it.each([
     { bonus: 0, slots: 0, expected: 0 },
     { bonus: 1, slots: 0, expected: 1 },
     { bonus: 1, slots: 1, expected: 2 },
     { bonus: 2, slots: 0, expected: 3 },
     { bonus: 2, slots: 2, expected: 5 },
-    { bonus: 3, slots: 0, expected: 6 },
     { bonus: 3, slots: 3, expected: 9 },
-    { bonus: 4, slots: 0, expected: 10 },
-    { bonus: 4, slots: 4, expected: 14 },
-  ])(
-    'for bonus $bonus and slots $slots, effective tier is $expected',
-    ({ bonus, slots, expected }) => {
-      expect(computeEffectiveTier(bonus, slots)).toBe(expected);
-    }
-  );
+    { bonus: 4, slots: 1, expected: 11 },
+  ])('should compute N = T($bonus) + $slots = $expected', ({ bonus, slots, expected }) => {
+    expect(computeEffectiveTier(bonus, slots)).toBe(expected);
+  });
 
-  it.each([-1, 1.5])('should throw on invalid slots: %s', (invalidSlots) => {
-    expect(() => computeEffectiveTier(1, invalidSlots)).toThrow();
+  it.each([
+    { bonus: 1, slots: -1 },
+    { bonus: 1, slots: 1.5 },
+  ])('should throw on invalid slots: %o', ({ bonus, slots }) => {
+    expect(() => computeEffectiveTier(bonus, slots)).toThrow();
   });
 });
 
-describe('computeCeilingPrice — P_plafond = Math.round(C * 1000 * N^2)', () => {
-  it.each<[ItemCategory, number, number]>([
-    ['WEAPON', 0, 0],
-    ['WEAPON', 1, 1000],
-    ['WEAPON', 2, 4000],
-    ['WEAPON', 3, 9000],
-    ['WEAPON', 5, 25000],
-    ['ARMOR_SHIELD', 1, 850],
-    ['ARMOR_SHIELD', 3, 7650],
-    ['ARMOR_SHIELD', 6, 30600],
-    ['WONDROUS_ITEM', 1, 800],
-    ['WONDROUS_ITEM', 2, 3200],
-    ['WONDROUS_ITEM', 3, 7200],
-  ])('category %s with tier %i should cost %i po', (cat, tier, expectedPrice) => {
-    expect(computeCeilingPrice(cat, tier)).toBe(expectedPrice);
-  });
-});
-
-describe('computeForgeCraft — Golden Test Cases & Capacity Integrity', () => {
+describe('computeForgeQuote - Capacity integrity rule & golden cases', () => {
   it.each([
     {
-      name: 'Arme +1 nue (B=1, S=0) -> 1 000 po',
-      request: { category: 'WEAPON' as ItemCategory, bonus: 1, slots: 0 },
-      expected: { isValid: true, ceilingPrice: 1000, effectiveTier: 1 },
+      description: 'Arme +1 nue (B=1, S=0) -> 1000 po',
+      category: 'WEAPON' as ItemCategory,
+      enhancementBonus: 1,
+      slots: 0,
+      expectedTier: 1,
+      expectedPrice: 1000,
     },
     {
-      name: 'Arme +2 nue (B=2, S=0) -> 9 000 po',
-      request: { category: 'WEAPON' as ItemCategory, bonus: 2, slots: 0 },
-      expected: { isValid: true, ceilingPrice: 9000, effectiveTier: 3 },
+      description: 'Arme +2 nue (B=2, S=0) -> 9000 po',
+      category: 'WEAPON' as ItemCategory,
+      enhancementBonus: 2,
+      slots: 0,
+      expectedTier: 3,
+      expectedPrice: 9000,
     },
     {
-      name: 'Arme +2 avec Sournoise (1) + Frugale (1) (S=2) -> 25 000 po',
-      request: {
-        category: 'WEAPON' as ItemCategory,
-        bonus: 2,
-        enchantments: [{ slots: 1 }, { slots: 1 }],
-      },
-      expected: { isValid: true, ceilingPrice: 25000, effectiveTier: 5 },
+      description: 'Arme +2 avec Sournoise (1) + Frugale (1) => S=2 -> 25000 po',
+      category: 'WEAPON' as ItemCategory,
+      enhancementBonus: 2,
+      slots: 2,
+      expectedTier: 5,
+      expectedPrice: 25000,
     },
     {
-      name: 'Armure +1 nue (B=1, S=0) -> 850 po',
-      request: { category: 'ARMOR_SHIELD' as ItemCategory, bonus: 1, slots: 0 },
-      expected: { isValid: true, ceilingPrice: 850, effectiveTier: 1 },
+      description: 'Armure +2 nue (B=2, S=0) -> 0.85 * 9000 = 7650 po',
+      category: 'ARMOR_SHIELD' as ItemCategory,
+      enhancementBonus: 2,
+      slots: 0,
+      expectedTier: 3,
+      expectedPrice: 7650,
     },
     {
-      name: 'Armure +2 nue (B=2, S=0) -> 7 650 po',
-      request: { category: 'ARMOR_SHIELD' as ItemCategory, bonus: 2, slots: 0 },
-      expected: { isValid: true, ceilingPrice: 7650, effectiveTier: 3 },
+      description: 'Armure +3 nue (B=3, S=0) -> 0.85 * 36000 = 30600 po',
+      category: 'ARMOR_SHIELD' as ItemCategory,
+      enhancementBonus: 3,
+      slots: 0,
+      expectedTier: 6,
+      expectedPrice: 30600,
     },
     {
-      name: 'Armure +3 nue (B=3, S=0) -> 30 600 po',
-      request: { category: 'ARMOR_SHIELD' as ItemCategory, bonus: 3, slots: 0 },
-      expected: { isValid: true, ceilingPrice: 30600, effectiveTier: 6 },
+      description: 'Objet merveilleux autonome (B=0, S=3) -> 0.80 * 1000 * 9 = 7200 po',
+      category: 'WONDROUS_ITEM' as ItemCategory,
+      enhancementBonus: 0,
+      slots: 3,
+      expectedTier: 3,
+      expectedPrice: 7200,
     },
-    {
-      name: 'Objet autonome (Wondrous) avec 2 slots -> 3 200 po',
-      request: { category: 'WONDROUS_ITEM' as ItemCategory, bonus: 0, slots: 2 },
-      expected: { isValid: true, ceilingPrice: 3200, effectiveTier: 2 },
-    },
-  ])('$name', ({ request, expected }) => {
-    const result = computeForgeCraft(request);
-    expect(result.isValid).toBe(expected.isValid);
-    if (result.isValid) {
-      expect(result.ceilingPrice).toBe(expected.ceilingPrice);
-      expect(result.effectiveTier).toBe(expected.effectiveTier);
-    }
+  ])('$description', ({ category, enhancementBonus, slots, expectedTier, expectedPrice }) => {
+    const quote = computeForgeQuote({ category, enhancementBonus, slots });
+    expect(quote.isValid).toBe(true);
+    expect(quote.effectiveTier).toBe(expectedTier);
+    expect(quote.ceilingPrice).toBe(expectedPrice);
   });
 
   it.each([
     {
-      name: 'Arme +2 avec S=3 -> rejet CAPACITY_EXCEEDED',
-      request: { category: 'WEAPON' as ItemCategory, bonus: 2, slots: 3 },
+      description: 'Arme +2 avec 3 slots (S > B) -> CAPACITY_EXCEEDED',
+      category: 'WEAPON' as ItemCategory,
+      enhancementBonus: 2,
+      slots: 3,
       expectedError: 'CAPACITY_EXCEEDED',
     },
     {
-      name: 'Arme +1 avec S=2 -> rejet CAPACITY_EXCEEDED',
-      request: { category: 'WEAPON' as ItemCategory, bonus: 1, slots: 2 },
+      description: 'Armure +1 avec 2 slots (S > B) -> CAPACITY_EXCEEDED',
+      category: 'ARMOR_SHIELD' as ItemCategory,
+      enhancementBonus: 1,
+      slots: 2,
       expectedError: 'CAPACITY_EXCEEDED',
     },
     {
-      name: 'Armure +1 avec S=2 -> rejet CAPACITY_EXCEEDED',
-      request: { category: 'ARMOR_SHIELD' as ItemCategory, bonus: 1, slots: 2 },
+      description: 'Objet autonome avec B > 0 -> WONDROUS_ITEM_CANNOT_HAVE_BONUS',
+      category: 'WONDROUS_ITEM' as ItemCategory,
+      enhancementBonus: 1,
+      slots: 0,
+      expectedError: 'WONDROUS_ITEM_CANNOT_HAVE_BONUS',
+    },
+  ])('$description', ({ category, enhancementBonus, slots, expectedError }) => {
+    const quote = computeForgeQuote({ category, enhancementBonus, slots });
+    expect(quote.isValid).toBe(false);
+    expect(quote.error).toBe(expectedError);
+  });
+});
+
+describe('computeUpgrade', () => {
+  it.each([
+    {
+      description: 'Armure +2 nue vers +3 nue: 0.85 * (36000 - 9000) = 22950 po',
+      category: 'ARMOR_SHIELD' as ItemCategory,
+      initialEnhancementBonus: 2,
+      initialSlots: 0,
+      finalEnhancementBonus: 3,
+      finalSlots: 0,
+      expectedUpgradePrice: 22950,
+      expectedInitialPrice: 7650,
+      expectedFinalPrice: 30600,
+    },
+    {
+      description: 'Arme +1 nue (1000 po) vers +2 nue (9000 po) -> 8000 po',
+      category: 'WEAPON' as ItemCategory,
+      initialEnhancementBonus: 1,
+      initialSlots: 0,
+      finalEnhancementBonus: 2,
+      finalSlots: 0,
+      expectedUpgradePrice: 8000,
+      expectedInitialPrice: 1000,
+      expectedFinalPrice: 9000,
+    },
+    {
+      description: 'Arme +2 nue (9000 po) vers Arme +2 avec 2 slots (25000 po) -> 16000 po',
+      category: 'WEAPON' as ItemCategory,
+      initialEnhancementBonus: 2,
+      initialSlots: 0,
+      finalEnhancementBonus: 2,
+      finalSlots: 2,
+      expectedUpgradePrice: 16000,
+      expectedInitialPrice: 9000,
+      expectedFinalPrice: 25000,
+    },
+  ])('$description', ({
+    category,
+    initialEnhancementBonus,
+    initialSlots,
+    finalEnhancementBonus,
+    finalSlots,
+    expectedUpgradePrice,
+    expectedInitialPrice,
+    expectedFinalPrice,
+  }) => {
+    const res = computeUpgrade({
+      category,
+      initialEnhancementBonus,
+      initialSlots,
+      finalEnhancementBonus,
+      finalSlots,
+    });
+    expect(res.isValid).toBe(true);
+    expect(res.initialCeilingPrice).toBe(expectedInitialPrice);
+    expect(res.finalCeilingPrice).toBe(expectedFinalPrice);
+    expect(res.upgradePrice).toBe(expectedUpgradePrice);
+  });
+
+  it.each([
+    {
+      description: 'Rejet si N_final <= N_init (même niveau)',
+      category: 'WEAPON' as ItemCategory,
+      initialEnhancementBonus: 2,
+      initialSlots: 0,
+      finalEnhancementBonus: 2,
+      finalSlots: 0,
+      expectedError: 'FINAL_TIER_NOT_GREATER',
+    },
+    {
+      description: 'Rejet si N_final < N_init (rétrogradation)',
+      category: 'WEAPON' as ItemCategory,
+      initialEnhancementBonus: 2,
+      initialSlots: 1,
+      finalEnhancementBonus: 2,
+      finalSlots: 0,
+      expectedError: 'FINAL_TIER_NOT_GREATER',
+    },
+    {
+      description: 'Rejet si objet final dépasse la capacité (S > B)',
+      category: 'WEAPON' as ItemCategory,
+      initialEnhancementBonus: 1,
+      initialSlots: 0,
+      finalEnhancementBonus: 1,
+      finalSlots: 2,
+      expectedError: 'CAPACITY_EXCEEDED',
+    },
+  ])('$description', ({
+    category,
+    initialEnhancementBonus,
+    initialSlots,
+    finalEnhancementBonus,
+    finalSlots,
+    expectedError,
+  }) => {
+    const res = computeUpgrade({
+      category,
+      initialEnhancementBonus,
+      initialSlots,
+      finalEnhancementBonus,
+      finalSlots,
+    });
+    expect(res.isValid).toBe(false);
+    expect(res.error).toBe(expectedError);
+  });
+});
+
+describe('computeAmmoQuote', () => {
+  it.each([
+    {
+      description: '10 flèches +1 (N=1, Q=10) -> (1000 / 50) * 10 = 200 po',
+      enhancementBonus: 1,
+      slots: 0,
+      quantity: 10,
+      supplements: [] as AmmoSupplement[],
+      expectedPrice: 200,
+      expectedTier: 1,
+    },
+    {
+      description: '10 flèches +2 (N=3, Q=10) -> (9000 / 50) * 10 = 1800 po',
+      enhancementBonus: 2,
+      slots: 0,
+      quantity: 10,
+      supplements: [] as AmmoSupplement[],
+      expectedPrice: 1800,
+      expectedTier: 3,
+    },
+    {
+      description: '50 flèches +1 (N=1, Q=50) -> 1000 po',
+      enhancementBonus: 1,
+      slots: 0,
+      quantity: 50,
+      supplements: [] as AmmoSupplement[],
+      expectedPrice: 1000,
+      expectedTier: 1,
+    },
+    {
+      description: '10 flèches +1 avec Incassable (+20 po/u) -> 200 + 200 = 400 po',
+      enhancementBonus: 1,
+      slots: 0,
+      quantity: 10,
+      supplements: ['INCASSABLE'] as AmmoSupplement[],
+      expectedPrice: 400,
+      expectedTier: 1,
+    },
+    {
+      description: '10 flèches +1 avec Percutante (+20) et Argentée (+10) -> 200 + 300 = 500 po',
+      enhancementBonus: 1,
+      slots: 0,
+      quantity: 10,
+      supplements: ['PERCUTANTE', 'ARGENTEE'] as AmmoSupplement[],
+      expectedPrice: 500,
+      expectedTier: 1,
+    },
+  ])('$description', ({
+    enhancementBonus,
+    slots,
+    quantity,
+    supplements,
+    expectedPrice,
+    expectedTier,
+  }) => {
+    const res = computeAmmoQuote({ enhancementBonus, slots, quantity, supplements });
+    expect(res.isValid).toBe(true);
+    expect(res.effectiveTier).toBe(expectedTier);
+    expect(res.ceilingPrice).toBe(expectedPrice);
+  });
+
+  it.each([
+    {
+      description: 'Rejet si capacité munitions dépassée (S > B)',
+      enhancementBonus: 1,
+      slots: 2,
+      quantity: 10,
       expectedError: 'CAPACITY_EXCEEDED',
     },
     {
-      name: 'Wondrous Item avec B=1 -> rejet WONDROUS_CANNOT_HAVE_BONUS',
-      request: { category: 'WONDROUS_ITEM' as ItemCategory, bonus: 1, slots: 2 },
-      expectedError: 'WONDROUS_CANNOT_HAVE_BONUS',
+      description: 'Rejet si quantité <= 0',
+      enhancementBonus: 1,
+      slots: 0,
+      quantity: 0,
+      expectedError: 'INVALID_QUANTITY',
     },
     {
-      name: 'Bonus invalide (> 4) -> rejet INVALID_BONUS',
-      request: { category: 'WEAPON' as ItemCategory, bonus: 5, slots: 0 },
+      description: 'Rejet si bonus négatif',
+      enhancementBonus: -1,
+      slots: 0,
+      quantity: 10,
       expectedError: 'INVALID_BONUS',
     },
-  ])('$name', ({ request, expectedError }) => {
-    const result = computeForgeCraft(request);
-    expect(result.isValid).toBe(false);
-    if (!result.isValid) {
-      expect(result.error).toBe(expectedError);
-    }
-  });
-});
-
-describe('computeUpgradeCraft — Améliorations & Golden Test Cases', () => {
-  it.each([
-    {
-      name: 'Armure +2 nue vers +3 nue -> 22 950 po (30 600 - 7 650)',
-      request: {
-        category: 'ARMOR_SHIELD' as ItemCategory,
-        initialBonus: 2,
-        initialSlots: 0,
-        finalBonus: 3,
-        finalSlots: 0,
-      },
-      expectedCost: 22950,
-    },
-    {
-      name: 'Arme +1 nue vers +2 nue -> 8 000 po (9 000 - 1 000)',
-      request: {
-        category: 'WEAPON' as ItemCategory,
-        initialBonus: 1,
-        initialSlots: 0,
-        finalBonus: 2,
-        finalSlots: 0,
-      },
-      expectedCost: 8000,
-    },
-    {
-      name: 'Arme +2 nue vers +2 avec 2 slots -> 16 000 po (25 000 - 9 000)',
-      request: {
-        category: 'WEAPON' as ItemCategory,
-        initialBonus: 2,
-        initialSlots: 0,
-        finalBonus: 2,
-        finalSlots: 2,
-      },
-      expectedCost: 16000,
-    },
-    {
-      name: 'Objet autonome N=1 vers N=3 -> 6 400 po (7 200 - 800)',
-      request: {
-        category: 'WONDROUS_ITEM' as ItemCategory,
-        initialBonus: 0,
-        initialSlots: 1,
-        finalBonus: 0,
-        finalSlots: 3,
-      },
-      expectedCost: 6400,
-    },
-  ])('$name', ({ request, expectedCost }) => {
-    const result = computeUpgradeCraft(request);
-    expect(result.isValid).toBe(true);
-    if (result.isValid) {
-      expect(result.upgradeCost).toBe(expectedCost);
-    }
-  });
-
-  it.each([
-    {
-      name: 'N_final == N_init rejeté',
-      request: {
-        category: 'WEAPON' as ItemCategory,
-        initialBonus: 2,
-        finalBonus: 2,
-      },
-      error: 'INVALID_UPGRADE_TIER',
-    },
-    {
-      name: 'N_final < N_init rejeté',
-      request: {
-        category: 'WEAPON' as ItemCategory,
-        initialBonus: 3,
-        finalBonus: 2,
-      },
-      error: 'INVALID_UPGRADE_TIER',
-    },
-    {
-      name: 'Capacité finale dépassée rejetée',
-      request: {
-        category: 'WEAPON' as ItemCategory,
-        initialBonus: 1,
-        initialSlots: 0,
-        finalBonus: 2,
-        finalSlots: 3,
-      },
-      error: 'CAPACITY_EXCEEDED',
-    },
-  ])('$name', ({ request, error }) => {
-    const result = computeUpgradeCraft(request);
-    expect(result.isValid).toBe(false);
-    if (!result.isValid) {
-      expect(result.error).toBe(error);
-    }
-  });
-});
-
-describe('computeAmmoCraft — Munitions & Golden Test Cases', () => {
-  it.each([
-    {
-      name: '10 flèches +1 (B=1, S=0) -> 200 po',
-      request: { bonus: 1, quantity: 10 },
-      expectedTotal: 200,
-      expectedUnitBase: 20,
-    },
-    {
-      name: '10 flèches +2 (B=2, S=0) -> 1 800 po',
-      request: { bonus: 2, quantity: 10 },
-      expectedTotal: 1800,
-      expectedUnitBase: 180,
-    },
-    {
-      name: '10 flèches +1 avec Argentée (+10 po/unité) -> 300 po',
-      request: {
-        bonus: 1,
-        quantity: 10,
-        supplements: ['SILVERED' as const],
-      },
-      expectedTotal: 300,
-      expectedUnitBase: 20,
-    },
-    {
-      name: '20 flèches +1 avec Incassable (+20) et Percutante (+20) -> 1 200 po',
-      request: {
-        bonus: 1,
-        quantity: 20,
-        supplements: ['UNBREAKABLE' as const, 'PIERCING' as const],
-      },
-      expectedTotal: 1200,
-      expectedUnitBase: 20,
-    },
-  ])('$name', ({ request, expectedTotal, expectedUnitBase }) => {
-    const result = computeAmmoCraft(request);
-    expect(result.isValid).toBe(true);
-    if (result.isValid) {
-      expect(result.totalCeilingPrice).toBe(expectedTotal);
-      expect(result.unitBasePrice).toBe(expectedUnitBase);
-    }
-  });
-
-  it.each([
-    {
-      name: 'Quantité nulle -> INVALID_QUANTITY',
-      request: { bonus: 1, quantity: 0 },
-      error: 'INVALID_QUANTITY',
-    },
-    {
-      name: 'Quantité négative -> INVALID_QUANTITY',
-      request: { bonus: 1, quantity: -5 },
-      error: 'INVALID_QUANTITY',
-    },
-    {
-      name: 'Capacité de munitions dépassée S > B',
-      request: { bonus: 1, slots: 2, quantity: 10 },
-      error: 'CAPACITY_EXCEEDED',
-    },
-    {
-      name: 'Bonus invalide',
-      request: { bonus: 6, quantity: 10 },
-      error: 'INVALID_BONUS',
-    },
-  ])('$name', ({ request, error }) => {
-    const result = computeAmmoCraft(request);
-    expect(result.isValid).toBe(false);
-    if (!result.isValid) {
-      expect(result.error).toBe(error);
-    }
+  ])('$description', ({
+    enhancementBonus,
+    slots,
+    quantity,
+    expectedError,
+  }) => {
+    const res = computeAmmoQuote({ enhancementBonus, slots, quantity });
+    expect(res.isValid).toBe(false);
+    expect(res.error).toBe(expectedError);
   });
 });
